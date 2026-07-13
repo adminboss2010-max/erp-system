@@ -212,13 +212,8 @@ function showMsg(text, type){
 async function afterAuth(token, company){
   localStorage.setItem('erp_token', token);
   localStorage.setItem('erp_company', JSON.stringify(company));
-  document.getElementById('authView').style.display = 'none';
-  document.querySelector('.dash').style.display = 'block';
-  document.getElementById('dCompanyName').textContent = company.name_ar;
-  document.getElementById('dCompanyEmail').textContent = company.admin_email;
-
-  const data = await callApi('getData', { token, sheet: 'المعاملات' });
-  document.getElementById('dTxCount').textContent = data.ok ? data.rows.length : '—';
+  // النظام الكامل هو اللي بيفتح دلوقتي بعد الدخول
+  window.location.href = './app.html';
 }
 
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -259,7 +254,7 @@ document.getElementById('signoutBtn').addEventListener('click', () => {
 
 // تسجيل الـ Service Worker
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js'));
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
 }
 </script>
 </body>
