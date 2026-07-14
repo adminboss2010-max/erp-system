@@ -18949,6 +18949,7 @@ button[onclick*="PrintEngine.print"] {
 </head>
 <body>
 <script src="config.js"></script>
+<script src="api-client.js"></script>
 <script>
   // 🔐 بوابة الدخول — لازم توكن صالح قبل ما النظام يفتح
   (function () {
@@ -31271,14 +31272,8 @@ async function saveNewTransaction() {
   // 🏭 Business Engine: تحقّق مركزي من الرصيد قبل ما نسمح بالعملية
   // (نفس القاعدة هتتطبق مهما كانت الواجهة اللي بتضيف المعاملة مستقبلاً)
   try {
-    const token = localStorage.getItem('erp_token');
-    if (token && window.APPS_SCRIPT_URL) {
-      const res = await fetch(window.APPS_SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(Object.assign({ action: 'postTransaction', token: token }, newTx))
-      });
-      const r = await res.json();
+    if (window.ApiClient) {
+      const r = await ApiClient.sales.postTransaction(newTx);
       if (!r.ok) {
         showToast('❌ مرفوض', r.error || 'تعذّر تنفيذ العملية', false);
         return;
@@ -34762,15 +34757,11 @@ const StorageV2 = {
     // 🌐 مزامنة سحابية (Cloud Sync) — حفظ نسخة كاملة (backup سريع الاستعادة) في شيت AppState
     try {
       var token = localStorage.getItem('erp_token');
-      if (token && window.APPS_SCRIPT_URL) {
-        fetch(window.APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'saveState', token: token, state: data })
-        }).catch(function (e) { if (typeof Logger !== 'undefined') Logger.warn('Cloud save failed:', e); });
+      if (token && window.ApiClient) {
+        ApiClient.state.save(data).catch(function (e) { if (typeof Logger !== 'undefined') Logger.warn('Cloud save failed:', e); });
 
         // 🆕 مزامنة صفوف مقروءة في شيتات الشركة الفعلية (المعاملات/العملاء/المناديب/الأصناف)
-        this.syncStructuredSheets(data, token);
+        this.syncStructuredSheets(data);
       }
     } catch (e) {}
 
@@ -34779,13 +34770,10 @@ const StorageV2 = {
 
   // 🆕 يحوّل بيانات النظام (O) لصفوف مقروءة ويكتبها في شيتات الشركة الحقيقية
   // (بدل ما تفضل البيانات محبوسة كـ JSON مضغوط في شيت AppState المخفي فقط)
-  syncStructuredSheets(data, token) {
+  syncStructuredSheets(data) {
     try {
-      const call = (sheet, rows) => fetch(window.APPS_SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'saveData', token: token, sheet: sheet, rows: rows })
-      }).catch(function (e) { if (typeof Logger !== 'undefined') Logger.warn('sheet sync failed [' + sheet + ']:', e); });
+      const call = (sheet, rows) => ApiClient.sheet.saveAll(sheet, rows)
+        .catch(function (e) { if (typeof Logger !== 'undefined') Logger.warn('sheet sync failed [' + sheet + ']:', e); });
 
       // المعاملات ← headers: id, date, type, doc_no, customer, debit, credit, qty, discount, free, agent, month, item, item_code, unit_cost
       const txRows = (data.tx || []).map(t => {
@@ -34883,13 +34871,8 @@ const StorageV2 = {
     if (!data) {
       try {
         var token = localStorage.getItem('erp_token');
-        if (token && window.APPS_SCRIPT_URL) {
-          const res = await fetch(window.APPS_SCRIPT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'loadState', token: token })
-          });
-          const json = await res.json();
+        if (token && window.ApiClient) {
+          const json = await ApiClient.state.load();
           if (json && json.ok && json.state && Object.keys(json.state).length) {
             data = json.state;
             source = 'cloud';

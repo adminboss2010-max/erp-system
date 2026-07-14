@@ -4,6 +4,7 @@ const APP_SHELL = [
   './index.html',
   './app.html',
   './config.js',
+  './api-client.js',
   './manifest.json'
 ];
 

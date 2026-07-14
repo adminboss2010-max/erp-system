@@ -165,25 +165,15 @@
 </div>
 
 <script src="config.js"></script>
+<script src="api-client.js"></script>
 <script>
-const API_URL = window.APPS_SCRIPT_URL;
-
-async function callApi(action, payload) {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    // text/plain يتفادى CORS preflight مع Apps Script
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(Object.assign({ action }, payload))
-  });
-  return res.json();
-}
 
 // فحص الاتصال بالسيرفر
 (async function ping(){
   const dot = document.getElementById('pingDot');
   const text = document.getElementById('pingText');
   try {
-    const r = await callApi('ping', {});
+    const r = await ApiClient.auth.ping();
     if (r.ok) { dot.classList.add('ok'); text.textContent = 'متصل بالسيرفر'; }
     else throw new Error();
   } catch (e) {
@@ -219,10 +209,10 @@ async function afterAuth(token, company){
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   showMsg('جارِ الدخول…', 'success');
-  const r = await callApi('login', {
-    admin_email: document.getElementById('loginEmail').value,
-    password: document.getElementById('loginPassword').value
-  });
+  const r = await ApiClient.auth.login(
+    document.getElementById('loginEmail').value,
+    document.getElementById('loginPassword').value
+  );
   if (r.ok) afterAuth(r.token, r.company);
   else showMsg(r.error, 'error');
 });
@@ -230,11 +220,11 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 document.getElementById('registerForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   showMsg('جارِ إنشاء الحساب وتجهيز قاعدة بياناتك…', 'success');
-  const r = await callApi('register', {
-    name_ar: document.getElementById('regName').value,
-    admin_email: document.getElementById('regEmail').value,
-    password: document.getElementById('regPassword').value
-  });
+  const r = await ApiClient.auth.register(
+    document.getElementById('regName').value,
+    document.getElementById('regEmail').value,
+    document.getElementById('regPassword').value
+  );
   if (r.ok) afterAuth(r.token, r.company);
   else showMsg(r.error, 'error');
 });
