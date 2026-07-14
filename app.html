@@ -31243,7 +31243,7 @@ function addTransaction() {
   document.body.appendChild(modal);
 }
 
-function saveNewTransaction() {
+async function saveNewTransaction() {
   const dt = document.getElementById('newTxDate').value;
   const inv = parseInt(document.getElementById('newTxInv').value) || 0;
   const client = document.getElementById('newTxClient').value;
@@ -31267,6 +31267,28 @@ function saveNewTransaction() {
     ag: ag,
     nt: document.getElementById('newTxNote').value || ''
   };
+
+  // 🏭 Business Engine: تحقّق مركزي من الرصيد قبل ما نسمح بالعملية
+  // (نفس القاعدة هتتطبق مهما كانت الواجهة اللي بتضيف المعاملة مستقبلاً)
+  try {
+    const token = localStorage.getItem('erp_token');
+    if (token && window.APPS_SCRIPT_URL) {
+      const res = await fetch(window.APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(Object.assign({ action: 'postTransaction', token: token }, newTx))
+      });
+      const r = await res.json();
+      if (!r.ok) {
+        showToast('❌ مرفوض', r.error || 'تعذّر تنفيذ العملية', false);
+        return;
+      }
+    }
+  } catch (e) {
+    if (typeof Logger !== 'undefined') Logger.warn('postTransaction engine call failed:', e);
+    // لو السيرفر مش متاح مؤقتاً، نكمل محليًا (تراجع لطيف بدل ما نوقف المستخدم بالكامل)
+  }
+
   O.tx.push(newTx);
   nayefSaveData();
   initFilter();
@@ -34737,7 +34759,7 @@ const StorageV2 = {
       Logger.warn('StorageV2 IDB failed:', e);
     }
 
-    // 🌐 مزامنة سحابية (Cloud Sync) — حفظ في شيت الشركة عبر Apps Script
+    // 🌐 مزامنة سحابية (Cloud Sync) — حفظ نسخة كاملة (backup سريع الاستعادة) في شيت AppState
     try {
       var token = localStorage.getItem('erp_token');
       if (token && window.APPS_SCRIPT_URL) {
@@ -34746,10 +34768,81 @@ const StorageV2 = {
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({ action: 'saveState', token: token, state: data })
         }).catch(function (e) { if (typeof Logger !== 'undefined') Logger.warn('Cloud save failed:', e); });
+
+        // 🆕 مزامنة صفوف مقروءة في شيتات الشركة الفعلية (المعاملات/العملاء/المناديب/الأصناف)
+        this.syncStructuredSheets(data, token);
       }
     } catch (e) {}
 
     return { ok: lsOk || idbOk, lsOk: lsOk, idbOk: idbOk, ts: ts, size: json.length };
+  },
+
+  // 🆕 يحوّل بيانات النظام (O) لصفوف مقروءة ويكتبها في شيتات الشركة الحقيقية
+  // (بدل ما تفضل البيانات محبوسة كـ JSON مضغوط في شيت AppState المخفي فقط)
+  syncStructuredSheets(data, token) {
+    try {
+      const call = (sheet, rows) => fetch(window.APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'saveData', token: token, sheet: sheet, rows: rows })
+      }).catch(function (e) { if (typeof Logger !== 'undefined') Logger.warn('sheet sync failed [' + sheet + ']:', e); });
+
+      // المعاملات ← headers: id, date, type, doc_no, customer, debit, credit, qty, discount, free, agent, month, item, item_code, unit_cost
+      const txRows = (data.tx || []).map(t => {
+        const isCredit = (t.tp === 'return' || t.tp === 'payment');
+        const firstItem = (Array.isArray(t.items) && t.items[0]) ? t.items[0] : null;
+        return {
+          id: t.id || '',
+          date: t.dt || '',
+          type: t.tp || '',
+          doc_no: t.i != null ? t.i : '',
+          customer: t.client || t.cl || '',
+          debit: isCredit ? '' : (t.amount || 0),
+          credit: isCredit ? (t.amount || 0) : '',
+          qty: firstItem ? firstItem[1] : '',
+          discount: '',
+          free: '',
+          agent: t.ag || '',
+          month: (t.dt || '').slice(0, 7),
+          item: firstItem ? firstItem[0] : '',
+          item_code: firstItem ? firstItem[0] : '',
+          unit_cost: t.cost || ''
+        };
+      });
+
+      // العملاء ← headers: code, name, phone, address, balance
+      const socRows = (data.soc || []).map(s => ({
+        code: s.i != null ? String(s.i) : '',
+        name: s.nm || '',
+        phone: s.phone || '',
+        address: s.reg || '',
+        balance: (s.ot != null ? s.ot : (s.ob || 0))
+      }));
+
+      // المناديب ← headers: code, name, phone, commission_rate
+      const agRows = (data.ag || []).map((a, idx) => ({
+        code: 'AG-' + (idx + 1),
+        name: a.nm || '',
+        phone: a.phone || '',
+        commission_rate: a.target != null ? a.target : ''
+      }));
+
+      // الأصناف ← headers: code, name, category, unit_cost, unit_price
+      const itRows = (data.it || []).map(i => ({
+        code: i.cd || '',
+        name: i.nm || '',
+        category: '',
+        unit_cost: i.uc || 0,
+        unit_price: i.up || 0
+      }));
+
+      call('المعاملات', txRows);
+      call('العملاء', socRows);
+      call('المناديب', agRows);
+      call('الأصناف', itRows);
+    } catch (e) {
+      if (typeof Logger !== 'undefined') Logger.warn('syncStructuredSheets:', e);
+    }
   },
 
   async load() {
