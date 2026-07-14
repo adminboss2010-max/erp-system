@@ -88,6 +88,13 @@ const ApiClient = {
     postTransaction(tx) {
       return ApiClient._call('postTransaction', tx);
     }
+  },
+
+  // ---------------- Audit Log (جاهزة لأي لوحة تحكم مستقبلية) ----------------
+  audit: {
+    get(limit) {
+      return ApiClient._call('getAuditLog', { limit: limit || 200 });
+    }
   }
 };
 
