@@ -3,249 +3,792 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>نظام التشغيل الموحد — الدخول</title>
-<meta name="theme-color" content="#1F3D2B">
+<title>prova · نظام إدارة الشركات الموحّد</title>
+<meta name="theme-color" content="#0f1b33">
+<meta name="description" content="prova — نظام تشغيل موحّد لإدارة الشركات. حساب واحد لكل شركة وبيانات مستقلة بالكامل.">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Markazi+Text:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper:#F6F3EC;
-    --paper-line:#DCD5C3;
-    --ledger:#1F3D2B;
-    --ledger-dark:#142A1D;
-    --brass:#B8935F;
-    --brass-light:#D9BC8C;
-    --ink:#262420;
-    --ink-soft:#63594C;
-    --danger:#9C4438;
-    --radius:10px;
+    --navy-0:#0a1326;
+    --navy-1:#0f1b33;
+    --navy-2:#1a2744;
+    --navy-3:#243456;
+    --navy-4:#3a4a6e;
+
+    --gold-1:#8a6f24;
+    --gold-2:#b8932f;
+    --gold-3:#d9bc8c;
+    --gold-4:#ecd6ad;
+
+    --ink:#1a2238;
+    --ink-soft:#5a6478;
+    --ink-mute:#8a93a6;
+
+    --paper:#f7f5ef;
+    --paper-2:#ffffff;
+    --line:#e5e0d2;
+    --line-soft:rgba(15,27,51,0.08);
+
+    --danger:#c0392b;
+    --danger-soft:#fdecea;
+    --success:#1f7a4d;
+    --success-soft:#e6f4ec;
+
+    --radius:14px;
+    --radius-sm:8px;
+    --shadow-sm:0 1px 2px rgba(15,27,51,0.04), 0 2px 6px rgba(15,27,51,0.04);
+    --shadow-md:0 4px 16px rgba(15,27,51,0.06), 0 12px 40px rgba(15,27,51,0.08);
+    --shadow-lg:0 20px 60px rgba(10,19,38,0.18);
+
+    --font-ar:'IBM Plex Sans Arabic', system-ui, sans-serif;
+    --font-display:'Manrope','IBM Plex Sans Arabic', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
   }
+
   *{box-sizing:border-box}
+  html,body{height:100%}
   body{
     margin:0;
-    min-height:100vh;
-    background:
-      repeating-linear-gradient(180deg, transparent, transparent 34px, var(--paper-line) 35px),
-      var(--paper);
-    font-family:'IBM Plex Sans Arabic', sans-serif;
+    font-family:var(--font-ar);
     color:var(--ink);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:24px;
-  }
-  .stamp{
-    position:fixed; top:20px; left:20px;
-    display:flex; align-items:center; gap:8px;
-    font-family:'IBM Plex Mono', monospace;
-    font-size:12px; color:var(--ink-soft);
-    background:rgba(246,243,236,0.9);
-    border:1px solid var(--paper-line);
-    border-radius:20px; padding:6px 14px;
-  }
-  .stamp .dot{width:8px;height:8px;border-radius:50%;background:#999;transition:background .3s}
-  .stamp .dot.ok{background:#3E7A4C}
-  .stamp .dot.bad{background:var(--danger)}
-
-  .card{
-    width:100%; max-width:420px;
-    background:#FFFEFB;
-    border:1px solid var(--paper-line);
-    border-radius:var(--radius);
-    box-shadow:0 12px 40px rgba(31,61,43,0.10);
+    background:var(--paper);
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
     overflow:hidden;
   }
-  .card-head{
-    background:var(--ledger);
-    color:var(--paper);
-    padding:28px 32px 22px;
-    position:relative;
-  }
-  .card-head::after{
-    content:"";
-    position:absolute; right:0; bottom:0; left:0; height:4px;
-    background:linear-gradient(90deg, var(--brass), var(--brass-light), var(--brass));
-  }
-  .eyebrow{
-    font-family:'IBM Plex Mono', monospace;
-    font-size:11px; letter-spacing:.14em;
-    color:var(--brass-light);
-    margin:0 0 6px;
-  }
-  h1{
-    font-family:'Markazi Text', serif;
-    font-weight:700;
-    font-size:32px;
-    margin:0;
-    line-height:1.2;
-  }
-  .sub{color:#C9D6CC; font-size:13px; margin-top:8px}
 
-  .tabs{display:flex; border-bottom:1px solid var(--paper-line)}
-  .tab{
-    flex:1; text-align:center; padding:14px;
-    font-size:14px; font-weight:600; color:var(--ink-soft);
-    cursor:pointer; border-bottom:2px solid transparent;
-  }
-  .tab.active{color:var(--ledger); border-bottom-color:var(--brass)}
-
-  .body{padding:26px 32px 30px}
-  .field{margin-bottom:16px}
-  label{display:block; font-size:13px; color:var(--ink-soft); margin-bottom:6px}
-  input{
-    width:100%; padding:11px 13px;
-    border:1px solid var(--paper-line); border-radius:6px;
-    font-family:inherit; font-size:14px; color:var(--ink);
+  /* ====== Stage ====== */
+  .stage{
+    position:fixed; inset:0;
+    display:grid;
+    grid-template-columns: 1.05fr 1fr;
     background:var(--paper);
   }
-  input:focus{outline:2px solid var(--brass); outline-offset:1px; border-color:var(--brass)}
 
-  button.primary{
-    width:100%; padding:12px; margin-top:6px;
-    background:var(--ledger); color:var(--paper);
-    border:none; border-radius:6px;
-    font-family:inherit; font-size:15px; font-weight:600;
-    cursor:pointer; transition:background .2s;
+  /* ====== Brand panel (left) ====== */
+  .brand{
+    position:relative;
+    background:
+      radial-gradient(120% 80% at 20% 0%, rgba(217,188,140,0.10), transparent 60%),
+      radial-gradient(80% 60% at 100% 100%, rgba(184,147,47,0.12), transparent 60%),
+      linear-gradient(160deg, var(--navy-1) 0%, var(--navy-0) 100%);
+    color:var(--paper);
+    padding:48px 56px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    overflow:hidden;
+    isolation:isolate;
   }
-  button.primary:hover{background:var(--ledger-dark)}
-  button.primary:disabled{opacity:.6; cursor:not-allowed}
+  .brand::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%);
+    z-index:-1;
+  }
+  .brand::after{
+    content:"";
+    position:absolute; right:-120px; bottom:-80px;
+    width:520px; height:520px;
+    background:radial-gradient(circle, rgba(184,147,47,0.18) 0%, transparent 60%);
+    z-index:-1;
+  }
 
-  .msg{font-size:13px; margin-top:12px; padding:10px 12px; border-radius:6px; display:none}
-  .msg.error{display:block; background:#F6E3DF; color:var(--danger)}
-  .msg.success{display:block; background:#E4EEE3; color:#2F5B3B}
+  .brand-top{
+    display:flex; align-items:center; gap:14px;
+    position:relative; z-index:2;
+  }
+  .brand-mark{
+    width:48px; height:48px;
+    display:grid; place-items:center;
+    background:linear-gradient(160deg, var(--navy-2), var(--navy-1));
+    border:1px solid rgba(217,188,140,0.18);
+    border-radius:12px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.25);
+  }
+  .brand-mark svg{width:30px; height:30px; display:block}
+  .brand-name{
+    font-family:var(--font-display);
+    font-weight:800;
+    font-size:22px;
+    letter-spacing:0.5px;
+    color:var(--gold-4);
+  }
+  .brand-name small{
+    display:block;
+    font-family:var(--font-mono);
+    font-weight:500;
+    font-size:10px;
+    letter-spacing:0.18em;
+    color:var(--gold-3);
+    opacity:0.7;
+    margin-top:2px;
+  }
 
-  .dash{display:none}
-  .dash .row{display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--paper-line); font-size:14px}
-  .dash .row span:last-child{font-family:'IBM Plex Mono', monospace; color:var(--ink-soft)}
-  .signout{margin-top:18px; background:none; border:none; color:var(--danger); font-size:13px; cursor:pointer; text-decoration:underline}
+  .brand-hero{
+    position:relative; z-index:2;
+    max-width:520px;
+  }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--font-mono);
+    font-size:11px; letter-spacing:0.18em;
+    color:var(--gold-3);
+    text-transform:uppercase;
+    margin-bottom:20px;
+    padding:6px 12px;
+    border:1px solid rgba(217,188,140,0.25);
+    border-radius:99px;
+    background:rgba(217,188,140,0.06);
+  }
+  .eyebrow .dot{
+    width:6px; height:6px; border-radius:50%;
+    background:var(--gold-3);
+    box-shadow:0 0 8px var(--gold-3);
+  }
+  .brand-hero h1{
+    font-family:var(--font-display);
+    font-weight:800;
+    font-size:54px;
+    line-height:1.1;
+    margin:0 0 18px;
+    color:#fff;
+    letter-spacing:-0.5px;
+  }
+  .brand-hero h1 .accent{
+    background:linear-gradient(135deg, var(--gold-3), var(--gold-4));
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+  }
+  .brand-hero p{
+    font-size:17px;
+    line-height:1.7;
+    color:#c7cfde;
+    margin:0;
+    max-width:440px;
+  }
+
+  .brand-features{
+    position:relative; z-index:2;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:14px 24px;
+    margin-top:36px;
+  }
+  .feature{
+    display:flex; align-items:flex-start; gap:10px;
+    font-size:13px;
+    color:#b8c1d2;
+  }
+  .feature svg{
+    flex:0 0 auto;
+    width:18px; height:18px;
+    color:var(--gold-3);
+    margin-top:2px;
+  }
+  .feature strong{color:#e6eaf3; font-weight:600; display:block; margin-bottom:2px}
+
+  .brand-foot{
+    position:relative; z-index:2;
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:rgba(199,207,222,0.6);
+    letter-spacing:0.05em;
+  }
+  .status-pill{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:6px 12px;
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:99px;
+  }
+  .status-pill .sdot{
+    width:7px; height:7px; border-radius:50%;
+    background:var(--ink-mute);
+    transition:all .3s;
+  }
+  .status-pill.ok .sdot{background:#3ecf8e; box-shadow:0 0 8px #3ecf8e}
+  .status-pill.bad .sdot{background:#ff6b5b; box-shadow:0 0 8px #ff6b5b}
+  .status-pill.ok{border-color:rgba(62,207,142,0.3); color:#a8e6c8}
+  .status-pill.bad{border-color:rgba(255,107,91,0.3); color:#ffb4ad}
+
+  /* decorative animated bars */
+  .bars-bg{
+    position:absolute; left:0; right:0; bottom:0;
+    height:30%;
+    display:flex; align-items:flex-end; justify-content:center;
+    gap:14px;
+    padding:0 56px 0;
+    opacity:0.18;
+    z-index:-1;
+  }
+  .bars-bg .bar{
+    width:14px;
+    background:linear-gradient(180deg, var(--gold-4), var(--gold-2));
+    border-radius:4px 4px 0 0;
+    animation: rise 6s ease-in-out infinite;
+  }
+  .bars-bg .bar:nth-child(1){height:30%; animation-delay:-1s}
+  .bars-bg .bar:nth-child(2){height:48%; animation-delay:-2.5s}
+  .bars-bg .bar:nth-child(3){height:68%; animation-delay:-3.8s}
+  .bars-bg .bar:nth-child(4){height:88%; animation-delay:-5.2s; background:linear-gradient(180deg, var(--gold-4), var(--gold-3))}
+  @keyframes rise{
+    0%, 100%{transform:scaleY(1); transform-origin:bottom; opacity:0.85}
+    50%{transform:scaleY(0.7); opacity:0.5}
+  }
+
+  /* ====== Form panel (right) ====== */
+  .form-side{
+    display:flex; align-items:center; justify-content:center;
+    padding:32px;
+    overflow-y:auto;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(184,147,47,0.06), transparent 60%),
+      var(--paper);
+  }
+  .form-wrap{
+    width:100%; max-width:420px;
+  }
+  .form-head{
+    margin-bottom:28px;
+  }
+  .form-head h2{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:30px;
+    margin:0 0 8px;
+    color:var(--ink);
+    letter-spacing:-0.3px;
+  }
+  .form-head p{
+    margin:0;
+    color:var(--ink-soft);
+    font-size:14px;
+    line-height:1.6;
+  }
+
+  /* Tabs */
+  .tabs{
+    display:flex;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:var(--radius-sm);
+    padding:4px;
+    margin-bottom:24px;
+    box-shadow:var(--shadow-sm);
+  }
+  .tab{
+    flex:1; text-align:center;
+    padding:10px 12px;
+    font-size:14px; font-weight:600;
+    color:var(--ink-soft);
+    cursor:pointer;
+    border-radius:6px;
+    transition:all .2s;
+    user-select:none;
+  }
+  .tab.active{
+    background:var(--navy-1);
+    color:#fff;
+    box-shadow:0 2px 6px rgba(15,27,51,0.2);
+  }
+
+  /* Form */
+  form{display:flex; flex-direction:column; gap:14px}
+  .field{display:flex; flex-direction:column; gap:6px}
+  .field label{
+    font-size:13px;
+    font-weight:500;
+    color:var(--ink);
+  }
+  .field .input-wrap{
+    position:relative;
+  }
+  .field input{
+    width:100%;
+    padding:13px 44px 13px 14px;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:var(--radius-sm);
+    font-family:inherit;
+    font-size:14px;
+    color:var(--ink);
+    transition:all .2s;
+  }
+  .field input::placeholder{color:var(--ink-mute)}
+  .field input:focus{
+    outline:none;
+    border-color:var(--gold-2);
+    box-shadow:0 0 0 4px rgba(184,147,47,0.12);
+  }
+  .field .input-icon{
+    position:absolute; top:50%; right:14px;
+    transform:translateY(-50%);
+    width:18px; height:18px;
+    color:var(--ink-mute);
+    pointer-events:none;
+  }
+  .field .toggle-pw{
+    position:absolute; top:50%; left:12px;
+    transform:translateY(-50%);
+    background:none; border:none; padding:4px;
+    color:var(--ink-mute);
+    cursor:pointer;
+    border-radius:4px;
+  }
+  .field .toggle-pw:hover{color:var(--ink)}
+  .field .toggle-pw svg{width:18px; height:18px; display:block}
+
+  .row-between{
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:13px;
+    margin-top:-2px;
+  }
+  .row-between label{
+    display:flex; align-items:center; gap:8px;
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .row-between input[type=checkbox]{
+    accent-color:var(--gold-2);
+    width:14px; height:14px;
+  }
+  .row-between a{
+    color:var(--gold-1);
+    text-decoration:none;
+    font-weight:500;
+  }
+  .row-between a:hover{text-decoration:underline}
+
+  /* Submit */
+  button.primary{
+    margin-top:6px;
+    width:100%;
+    padding:14px 20px;
+    background:linear-gradient(135deg, var(--navy-1), var(--navy-2));
+    color:#fff;
+    border:1px solid var(--navy-3);
+    border-radius:var(--radius-sm);
+    font-family:inherit;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    transition:all .2s;
+    position:relative;
+    overflow:hidden;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  button.primary::before{
+    content:"";
+    position:absolute; inset:0;
+    background:linear-gradient(135deg, var(--gold-2), var(--gold-3));
+    opacity:0;
+    transition:opacity .25s;
+    z-index:0;
+  }
+  button.primary > *{position:relative; z-index:1}
+  button.primary:hover{transform:translateY(-1px); box-shadow:0 8px 20px rgba(15,27,51,0.25)}
+  button.primary:hover::before{opacity:0.15}
+  button.primary:disabled{opacity:0.6; cursor:not-allowed; transform:none; box-shadow:none}
+  button.primary .spinner{
+    width:16px; height:16px;
+    border:2px solid rgba(255,255,255,0.3);
+    border-top-color:#fff;
+    border-radius:50%;
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* Divider */
+  .divider{
+    display:flex; align-items:center; gap:12px;
+    color:var(--ink-mute);
+    font-size:12px;
+    margin:20px 0 14px;
+  }
+  .divider::before, .divider::after{
+    content:""; flex:1; height:1px; background:var(--line);
+  }
+
+  /* SSO buttons (decorative — wire later) */
+  .sso-row{display:flex; gap:10px}
+  .sso{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+    padding:11px;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:var(--radius-sm);
+    font-size:13px; font-weight:500;
+    color:var(--ink);
+    cursor:pointer;
+    transition:all .2s;
+  }
+  .sso:hover{border-color:var(--navy-2); background:#fafafa}
+  .sso svg{width:16px; height:16px}
+
+  /* Msg */
+  .msg{
+    display:none;
+    padding:11px 14px;
+    border-radius:var(--radius-sm);
+    font-size:13px;
+    line-height:1.5;
+    margin-top:6px;
+  }
+  .msg.error{display:flex; align-items:flex-start; gap:8px; background:var(--danger-soft); color:var(--danger); border:1px solid rgba(192,57,43,0.2)}
+  .msg.success{display:flex; align-items:flex-start; gap:8px; background:var(--success-soft); color:var(--success); border:1px solid rgba(31,122,77,0.2)}
+  .msg svg{width:16px; height:16px; flex:0 0 auto; margin-top:1px}
+
+  /* Footer */
+  .form-foot{
+    margin-top:24px;
+    text-align:center;
+    font-size:12px;
+    color:var(--ink-mute);
+  }
+  .form-foot a{color:var(--gold-1); text-decoration:none; font-weight:500}
+  .form-foot a:hover{text-decoration:underline}
+
+  /* ====== Mobile brand header ====== */
+  .mobile-brand{
+    display:none;
+    padding:24px 24px 0;
+    background:linear-gradient(160deg, var(--navy-1), var(--navy-0));
+    color:#fff;
+  }
+  .mobile-brand .brand-top{margin-bottom:18px}
+
+  /* ====== Responsive ====== */
+  @media (max-width: 980px){
+    .stage{grid-template-columns:1fr; grid-template-rows:auto 1fr}
+    .brand{display:none}
+    .mobile-brand{display:block}
+    .form-side{padding:32px 24px 24px}
+    .form-wrap{max-width:480px; margin:0 auto}
+  }
+  @media (max-width: 480px){
+    .form-head h2{font-size:24px}
+    .form-side{padding:20px 16px}
+  }
+
+  /* reveal animation */
+  .form-wrap, .brand > *{animation:fadeIn .6s ease-out both}
+  .form-wrap{animation-delay:.1s}
+  .brand-hero{animation-delay:.2s}
+  .brand-features{animation-delay:.3s}
+  @keyframes fadeIn{
+    from{opacity:0; transform:translateY(8px)}
+    to{opacity:1; transform:translateY(0)}
+  }
 </style>
 </head>
 <body>
 
-<div class="stamp"><span class="dot" id="pingDot"></span><span id="pingText">جارِ التحقق من الاتصال بالسيرفر…</span></div>
+<div class="stage">
 
-<div class="card">
-  <div class="card-head">
-    <p class="eyebrow">نظام تشغيل موحّد &nbsp;·&nbsp; ERP</p>
-    <h1>دفتر الدخول</h1>
-    <p class="sub">حساب واحد لكل شركة — بياناتك في شيت مستقل خاص بيك وحدك</p>
-  </div>
+  <!-- ====== Brand panel ====== -->
+  <aside class="brand" aria-hidden="true">
+    <header class="brand-top">
+      <div class="brand-mark" aria-label="prova">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect x="27" y="52" width="10" height="24" rx="2.5" fill="#b8932f"/>
+          <rect x="41" y="42" width="10" height="34" rx="2.5" fill="#b8932f"/>
+          <rect x="55" y="30" width="10" height="46" rx="2.5" fill="#b8932f"/>
+          <rect x="69" y="18" width="10" height="58" rx="2.5" fill="#d9bc8c"/>
+        </svg>
+      </div>
+      <div class="brand-name">
+        prova
+        <small>UNIFIED ERP SYSTEM</small>
+      </div>
+    </header>
 
-  <div id="authView">
-    <div class="tabs">
-      <div class="tab active" data-tab="login">تسجيل الدخول</div>
-      <div class="tab" data-tab="register">شركة جديدة</div>
+    <section class="brand-hero">
+      <span class="eyebrow"><span class="dot"></span>نظام تشغيل موحّد للشركات</span>
+      <h1>أدر شركتك<br>بمنطق <span class="accent">واحد متين</span></h1>
+      <p>حساب مستقل لكل شركة، شيت بيانات خاص بيك، وفريق متعدد المستخدمين — كل ده على منصة واحدة مبنية على Google Sheets كقاعدة بيانات مرنة وآمنة.</p>
+
+      <div class="brand-features">
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          <div><strong>قاعدة بيانات مستقلة</strong>شيت منفصل لكل شركة</div>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <div><strong>فريق متعدد</strong>صلاحيات لكل دور</div>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+          <div><strong>تقارير لحظية</strong>لوحات تحكم ومؤشرات</div>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <div><strong>أمان عالي</strong>تشفير وجلسات موقّعة</div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="brand-foot">
+      <span>© 2026 prova · كل الحقوق محفوظة</span>
+      <span class="status-pill" id="pingPill"><span class="sdot"></span><span id="pingText">جاري الفحص…</span></span>
+    </footer>
+
+    <div class="bars-bg" aria-hidden="true">
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
     </div>
-    <div class="body">
-      <form id="loginForm">
-        <div class="field"><label>البريد الإلكتروني</label><input type="email" id="loginEmail" required></div>
-        <div class="field"><label>كلمة المرور</label><input type="password" id="loginPassword" required></div>
-        <button class="primary" type="submit">دخول</button>
-      </form>
-      <form id="registerForm" style="display:none">
-        <div class="field"><label>اسم الشركة</label><input type="text" id="regName" required></div>
-        <div class="field"><label>البريد الإلكتروني للمسؤول</label><input type="email" id="regEmail" required></div>
-        <div class="field"><label>كلمة المرور</label><input type="password" id="regPassword" required minlength="6"></div>
-        <button class="primary" type="submit">إنشاء الحساب</button>
-      </form>
-      <div class="msg" id="authMsg"></div>
-    </div>
-  </div>
+  </aside>
 
-  <div class="dash body">
-    <div class="row"><span>الشركة</span><span id="dCompanyName">—</span></div>
-    <div class="row"><span>البريد</span><span id="dCompanyEmail">—</span></div>
-    <div class="row"><span>عدد المعاملات المسجّلة</span><span id="dTxCount">—</span></div>
-    <button class="signout" id="signoutBtn">تسجيل الخروج</button>
-  </div>
+  <!-- ====== Mobile brand header ====== -->
+  <header class="mobile-brand">
+    <div class="brand-top">
+      <div class="brand-mark">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect x="27" y="52" width="10" height="24" rx="2.5" fill="#b8932f"/>
+          <rect x="41" y="42" width="10" height="34" rx="2.5" fill="#b8932f"/>
+          <rect x="55" y="30" width="10" height="46" rx="2.5" fill="#b8932f"/>
+          <rect x="69" y="18" width="10" height="58" rx="2.5" fill="#d9bc8c"/>
+        </svg>
+      </div>
+      <div class="brand-name">prova<small>UNIFIED ERP</small></div>
+    </div>
+  </header>
+
+  <!-- ====== Form panel ====== -->
+  <main class="form-side">
+    <div class="form-wrap">
+
+      <div class="form-head">
+        <h2 id="formTitle">أهلاً بيك في prova</h2>
+        <p id="formSubtitle">سجّل دخولك للمتابعة إلى لوحة التحكم، أو أنشئ حساب جديد لشركتك.</p>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <div class="tab active" data-tab="login" role="tab" aria-selected="true">تسجيل الدخول</div>
+        <div class="tab" data-tab="register" role="tab" aria-selected="false">شركة جديدة</div>
+      </div>
+
+      <!-- Login form -->
+      <form id="loginForm" autocomplete="on" novalidate>
+        <div class="field">
+          <label for="loginEmail">البريد الإلكتروني</label>
+          <div class="input-wrap">
+            <input type="email" id="loginEmail" name="email" placeholder="name@company.com" required autocomplete="email">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>
+          </div>
+        </div>
+        <div class="field">
+          <label for="loginPassword">كلمة المرور</label>
+          <div class="input-wrap">
+            <input type="password" id="loginPassword" name="password" placeholder="••••••••" required autocomplete="current-password" minlength="6">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <button type="button" class="toggle-pw" data-target="loginPassword" aria-label="إظهار/إخفاء كلمة المرور">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="row-between">
+          <label><input type="checkbox" id="rememberMe" checked> تذكّرني</label>
+          <a href="#reset" id="forgotLink">نسيت كلمة المرور؟</a>
+        </div>
+        <button class="primary" type="submit" id="loginBtn">
+          <span class="btn-text">دخول إلى prova</span>
+        </button>
+      </form>
+
+      <!-- Register form -->
+      <form id="registerForm" autocomplete="on" novalidate style="display:none">
+        <div class="field">
+          <label for="regName">اسم الشركة</label>
+          <div class="input-wrap">
+            <input type="text" id="regName" name="company" placeholder="مثال: شركة النور للتجارة" required autocomplete="organization">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+          </div>
+        </div>
+        <div class="field">
+          <label for="regEmail">البريد الإلكتروني للمسؤول</label>
+          <div class="input-wrap">
+            <input type="email" id="regEmail" name="email" placeholder="admin@company.com" required autocomplete="email">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>
+          </div>
+        </div>
+        <div class="field">
+          <label for="regPassword">كلمة المرور</label>
+          <div class="input-wrap">
+            <input type="password" id="regPassword" name="password" placeholder="6 أحرف على الأقل" required autocomplete="new-password" minlength="6">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <button type="button" class="toggle-pw" data-target="regPassword" aria-label="إظهار/إخفاء كلمة المرور">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="primary" type="submit" id="registerBtn">
+          <span class="btn-text">إنشاء حساب الشركة</span>
+        </button>
+      </form>
+
+      <div class="msg" id="authMsg" role="status" aria-live="polite"></div>
+
+      <div class="form-foot">
+        محتاج مساعدة؟ <a href="#support">تواصل مع الدعم</a>
+      </div>
+    </div>
+  </main>
 </div>
 
 <script src="config.js"></script>
 <script src="api-client.js"></script>
 <script>
+  // ===== Helpers =====
+  const $ = (s, c=document) => c.querySelector(s);
+  const $$ = (s, c=document) => Array.from(c.querySelectorAll(s));
 
-// فحص الاتصال بالسيرفر
-(async function ping(){
-  const dot = document.getElementById('pingDot');
-  const text = document.getElementById('pingText');
-  try {
-    const r = await ApiClient.auth.ping();
-    if (r.ok) { dot.classList.add('ok'); text.textContent = 'متصل بالسيرفر'; }
-    else throw new Error();
-  } catch (e) {
-    dot.classList.add('bad'); text.textContent = 'تعذّر الاتصال — تحقق من APPS_SCRIPT_URL في config.js';
-  }
-})();
+  // ===== Ping =====
+  (async function ping(){
+    const pill = $('#pingPill');
+    const text = $('#pingText');
+    try {
+      const r = await ApiClient.auth.ping();
+      if (r.ok) { pill.classList.add('ok'); text.textContent = 'متصل بالسيرفر'; }
+      else throw new Error();
+    } catch (e) {
+      pill.classList.add('bad'); text.textContent = 'غير متصل — تحقّق من config.js';
+    }
+  })();
 
-// تبديل التبويبات
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    const isLogin = tab.dataset.tab === 'login';
-    document.getElementById('loginForm').style.display = isLogin ? 'block' : 'none';
-    document.getElementById('registerForm').style.display = isLogin ? 'none' : 'block';
-    document.getElementById('authMsg').className = 'msg';
+  // ===== Tabs =====
+  const formTitle = $('#formTitle');
+  const formSubtitle = $('#formSubtitle');
+  const TAB_TEXT = {
+    login:    { title: 'أهلاً بيك في prova',         sub: 'سجّل دخولك للمتابعة إلى لوحة التحكم.' },
+    register: { title: 'أنشئ حساب شركتك',            sub: 'ابدأ رحلتك مع prova — بياناتك في شيت مستقل خاص بيك.' }
+  };
+  $$('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      $$('.tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected','true');
+      const isLogin = tab.dataset.tab === 'login';
+      $('#loginForm').style.display    = isLogin ? 'flex' : 'none';
+      $('#registerForm').style.display = isLogin ? 'none' : 'flex';
+      $('#authMsg').className = 'msg';
+      const t = TAB_TEXT[tab.dataset.tab];
+      formTitle.textContent = t.title;
+      formSubtitle.textContent = t.sub;
+    });
   });
-});
 
-function showMsg(text, type){
-  const el = document.getElementById('authMsg');
-  el.textContent = text;
-  el.className = 'msg ' + type;
-}
+  // ===== Toggle password =====
+  $$('.toggle-pw').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const el = document.getElementById(btn.dataset.target);
+      el.type = el.type === 'password' ? 'text' : 'password';
+    });
+  });
 
-async function afterAuth(token, company){
-  localStorage.setItem('erp_token', token);
-  localStorage.setItem('erp_company', JSON.stringify(company));
-  // النظام الكامل هو اللي بيفتح دلوقتي بعد الدخول
-  window.location.href = './app.html';
-}
+  // ===== Messages =====
+  function showMsg(text, type){
+    const el = $('#authMsg');
+    el.className = 'msg ' + type;
+    el.innerHTML = `
+      ${type === 'error'
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'}
+      <span>${text}</span>`;
+  }
 
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  showMsg('جارِ الدخول…', 'success');
-  const r = await ApiClient.auth.login(
-    document.getElementById('loginEmail').value,
-    document.getElementById('loginPassword').value
-  );
-  if (r.ok) afterAuth(r.token, r.company);
-  else showMsg(r.error, 'error');
-});
+  function setLoading(btn, on){
+    const txt = btn.querySelector('.btn-text');
+    if (on) {
+      btn.disabled = true;
+      btn.dataset.orig = txt.textContent;
+      txt.textContent = 'جاري المعالجة…';
+      const sp = document.createElement('span');
+      sp.className = 'spinner';
+      btn.appendChild(sp);
+    } else {
+      btn.disabled = false;
+      if (btn.dataset.orig) txt.textContent = btn.dataset.orig;
+      const sp = btn.querySelector('.spinner');
+      if (sp) sp.remove();
+    }
+  }
 
-document.getElementById('registerForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  showMsg('جارِ إنشاء الحساب وتجهيز قاعدة بياناتك…', 'success');
-  const r = await ApiClient.auth.register(
-    document.getElementById('regName').value,
-    document.getElementById('regEmail').value,
-    document.getElementById('regPassword').value
-  );
-  if (r.ok) afterAuth(r.token, r.company);
-  else showMsg(r.error, 'error');
-});
+  // ===== Auth flow =====
+  async function afterAuth(token, company){
+    localStorage.setItem('erp_token', token);
+    localStorage.setItem('erp_company', JSON.stringify(company));
+    // تقدر تغيّر المسار ده لمسار تطبيقك
+    window.location.href = './app.html';
+  }
 
-document.getElementById('signoutBtn').addEventListener('click', () => {
-  localStorage.removeItem('erp_token');
-  localStorage.removeItem('erp_company');
-  location.reload();
-});
+  $('#loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('#loginBtn');
+    setLoading(btn, true);
+    showMsg('جاري التحقق من بياناتك…', 'success');
+    try {
+      const r = await ApiClient.auth.login(
+        $('#loginEmail').value.trim(),
+        $('#loginPassword').value
+      );
+      if (r.ok) afterAuth(r.token, r.company);
+      else showMsg(r.error || 'بيانات الدخول غير صحيحة', 'error');
+    } catch (err) {
+      showMsg('تعذّر الاتصال بالسيرفر. حاول مرة تانية.', 'error');
+    } finally {
+      setLoading(btn, false);
+    }
+  });
 
-// دخول تلقائي لو فيه جلسة محفوظة
-(function restoreSession(){
-  const token = localStorage.getItem('erp_token');
-  const company = localStorage.getItem('erp_company');
-  if (token && company) afterAuth(token, JSON.parse(company));
-})();
+  $('#registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('#registerBtn');
+    setLoading(btn, true);
+    showMsg('جاري إنشاء الحساب وتجهيز قاعدة بياناتك…', 'success');
+    try {
+      const r = await ApiClient.auth.register(
+        $('#regName').value.trim(),
+        $('#regEmail').value.trim(),
+        $('#regPassword').value
+      );
+      if (r.ok) afterAuth(r.token, r.company);
+      else showMsg(r.error || 'تعذّر إنشاء الحساب', 'error');
+    } catch (err) {
+      showMsg('تعذّر الاتصال بالسيرفر. حاول مرة تانية.', 'error');
+    } finally {
+      setLoading(btn, false);
+    }
+  });
 
-// تسجيل الـ Service Worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
-}
+  // ===== Forgot password placeholder =====
+  $('#forgotLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    showMsg('لو نسيت كلمة المرور، تواصل مع مدير النظام لإعادة الضبط.', 'error');
+  });
+
+  // ===== Restore session =====
+  (function restoreSession(){
+    const token = localStorage.getItem('erp_token');
+    const company = localStorage.getItem('erp_company');
+    if (token && company) afterAuth(token, JSON.parse(company));
+  })();
+
+  // ===== Service worker =====
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  }
 </script>
 </body>
 </html>
