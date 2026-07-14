@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>نظام التشغيل الموحد — الدخول</title>
+<meta name="theme-color" content="#1F3D2B">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Markazi+Text:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F6F3EC;
+    --paper-line:#DCD5C3;
+    --ledger:#1F3D2B;
+    --ledger-dark:#142A1D;
+    --brass:#B8935F;
+    --brass-light:#D9BC8C;
+    --ink:#262420;
+    --ink-soft:#63594C;
+    --danger:#9C4438;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      repeating-linear-gradient(180deg, transparent, transparent 34px, var(--paper-line) 35px),
+      var(--paper);
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    color:var(--ink);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .stamp{
+    position:fixed; top:20px; left:20px;
+    display:flex; align-items:center; gap:8px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px; color:var(--ink-soft);
+    background:rgba(246,243,236,0.9);
+    border:1px solid var(--paper-line);
+    border-radius:20px; padding:6px 14px;
+  }
+  .stamp .dot{width:8px;height:8px;border-radius:50%;background:#999;transition:background .3s}
+  .stamp .dot.ok{background:#3E7A4C}
+  .stamp .dot.bad{background:var(--danger)}
+
+  .card{
+    width:100%; max-width:420px;
+    background:#FFFEFB;
+    border:1px solid var(--paper-line);
+    border-radius:var(--radius);
+    box-shadow:0 12px 40px rgba(31,61,43,0.10);
+    overflow:hidden;
+  }
+  .card-head{
+    background:var(--ledger);
+    color:var(--paper);
+    padding:28px 32px 22px;
+    position:relative;
+  }
+  .card-head::after{
+    content:"";
+    position:absolute; right:0; bottom:0; left:0; height:4px;
+    background:linear-gradient(90deg, var(--brass), var(--brass-light), var(--brass));
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px; letter-spacing:.14em;
+    color:var(--brass-light);
+    margin:0 0 6px;
+  }
+  h1{
+    font-family:'Markazi Text', serif;
+    font-weight:700;
+    font-size:32px;
+    margin:0;
+    line-height:1.2;
+  }
+  .sub{color:#C9D6CC; font-size:13px; margin-top:8px}
+
+  .tabs{display:flex; border-bottom:1px solid var(--paper-line)}
+  .tab{
+    flex:1; text-align:center; padding:14px;
+    font-size:14px; font-weight:600; color:var(--ink-soft);
+    cursor:pointer; border-bottom:2px solid transparent;
+  }
+  .tab.active{color:var(--ledger); border-bottom-color:var(--brass)}
+
+  .body{padding:26px 32px 30px}
+  .field{margin-bottom:16px}
+  label{display:block; font-size:13px; color:var(--ink-soft); margin-bottom:6px}
+  input{
+    width:100%; padding:11px 13px;
+    border:1px solid var(--paper-line); border-radius:6px;
+    font-family:inherit; font-size:14px; color:var(--ink);
+    background:var(--paper);
+  }
+  input:focus{outline:2px solid var(--brass); outline-offset:1px; border-color:var(--brass)}
+
+  button.primary{
+    width:100%; padding:12px; margin-top:6px;
+    background:var(--ledger); color:var(--paper);
+    border:none; border-radius:6px;
+    font-family:inherit; font-size:15px; font-weight:600;
+    cursor:pointer; transition:background .2s;
+  }
+  button.primary:hover{background:var(--ledger-dark)}
+  button.primary:disabled{opacity:.6; cursor:not-allowed}
+
+  .msg{font-size:13px; margin-top:12px; padding:10px 12px; border-radius:6px; display:none}
+  .msg.error{display:block; background:#F6E3DF; color:var(--danger)}
+  .msg.success{display:block; background:#E4EEE3; color:#2F5B3B}
+
+  .dash{display:none}
+  .dash .row{display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--paper-line); font-size:14px}
+  .dash .row span:last-child{font-family:'IBM Plex Mono', monospace; color:var(--ink-soft)}
+  .signout{margin-top:18px; background:none; border:none; color:var(--danger); font-size:13px; cursor:pointer; text-decoration:underline}
+</style>
+</head>
+<body>
+
+<div class="stamp"><span class="dot" id="pingDot"></span><span id="pingText">جارِ التحقق من الاتصال بالسيرفر…</span></div>
+
+<div class="card">
+  <div class="card-head">
+    <p class="eyebrow">نظام تشغيل موحّد &nbsp;·&nbsp; ERP</p>
+    <h1>دفتر الدخول</h1>
+    <p class="sub">حساب واحد لكل شركة — بياناتك في شيت مستقل خاص بيك وحدك</p>
+  </div>
+
+  <div id="authView">
+    <div class="tabs">
+      <div class="tab active" data-tab="login">تسجيل الدخول</div>
+      <div class="tab" data-tab="register">شركة جديدة</div>
+    </div>
+    <div class="body">
+      <form id="loginForm">
+        <div class="field"><label>البريد الإلكتروني</label><input type="email" id="loginEmail" required></div>
+        <div class="field"><label>كلمة المرور</label><input type="password" id="loginPassword" required></div>
+        <button class="primary" type="submit">دخول</button>
+      </form>
+      <form id="registerForm" style="display:none">
+        <div class="field"><label>اسم الشركة</label><input type="text" id="regName" required></div>
+        <div class="field"><label>البريد الإلكتروني للمسؤول</label><input type="email" id="regEmail" required></div>
+        <div class="field"><label>كلمة المرور</label><input type="password" id="regPassword" required minlength="6"></div>
+        <button class="primary" type="submit">إنشاء الحساب</button>
+      </form>
+      <div class="msg" id="authMsg"></div>
+    </div>
+  </div>
+
+  <div class="dash body">
+    <div class="row"><span>الشركة</span><span id="dCompanyName">—</span></div>
+    <div class="row"><span>البريد</span><span id="dCompanyEmail">—</span></div>
+    <div class="row"><span>عدد المعاملات المسجّلة</span><span id="dTxCount">—</span></div>
+    <button class="signout" id="signoutBtn">تسجيل الخروج</button>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="api-client.js"></script>
+<script>
+
+// فحص الاتصال بالسيرفر
+(async function ping(){
+  const dot = document.getElementById('pingDot');
+  const text = document.getElementById('pingText');
+  try {
+    const r = await ApiClient.auth.ping();
+    if (r.ok) { dot.classList.add('ok'); text.textContent = 'متصل بالسيرفر'; }
+    else throw new Error();
+  } catch (e) {
+    dot.classList.add('bad'); text.textContent = 'تعذّر الاتصال — تحقق من APPS_SCRIPT_URL في config.js';
+  }
+})();
+
+// تبديل التبويبات
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const isLogin = tab.dataset.tab === 'login';
+    document.getElementById('loginForm').style.display = isLogin ? 'block' : 'none';
+    document.getElementById('registerForm').style.display = isLogin ? 'none' : 'block';
+    document.getElementById('authMsg').className = 'msg';
+  });
+});
+
+function showMsg(text, type){
+  const el = document.getElementById('authMsg');
+  el.textContent = text;
+  el.className = 'msg ' + type;
+}
+
+async function afterAuth(token, company){
+  localStorage.setItem('erp_token', token);
+  localStorage.setItem('erp_company', JSON.stringify(company));
+  // النظام الكامل هو اللي بيفتح دلوقتي بعد الدخول
+  window.location.href = './app.html';
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  showMsg('جارِ الدخول…', 'success');
+  const r = await ApiClient.auth.login(
+    document.getElementById('loginEmail').value,
+    document.getElementById('loginPassword').value
+  );
+  if (r.ok) afterAuth(r.token, r.company);
+  else showMsg(r.error, 'error');
+});
+
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  showMsg('جارِ إنشاء الحساب وتجهيز قاعدة بياناتك…', 'success');
+  const r = await ApiClient.auth.register(
+    document.getElementById('regName').value,
+    document.getElementById('regEmail').value,
+    document.getElementById('regPassword').value
+  );
+  if (r.ok) afterAuth(r.token, r.company);
+  else showMsg(r.error, 'error');
+});
+
+document.getElementById('signoutBtn').addEventListener('click', () => {
+  localStorage.removeItem('erp_token');
+  localStorage.removeItem('erp_company');
+  location.reload();
+});
+
+// دخول تلقائي لو فيه جلسة محفوظة
+(function restoreSession(){
+  const token = localStorage.getItem('erp_token');
+  const company = localStorage.getItem('erp_company');
+  if (token && company) afterAuth(token, JSON.parse(company));
+})();
+
+// تسجيل الـ Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+}
+</script>
+</body>
+</html>
