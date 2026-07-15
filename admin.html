@@ -215,13 +215,14 @@ function renderTable(companies) {
     const actionBtn = isSuspended
       ? `<button class="btn-activate" onclick="toggleStatus('${c.id}','active')">تفعيل</button>`
       : `<button class="btn-suspend" onclick="toggleStatus('${c.id}','suspended')">توقيف</button>`;
+    const deleteBtn = `<button class="btn-suspend" style="background:#fdecea" onclick="deleteCompanyRow('${c.id}','${escapeHtml(c.name_ar || '')}')">🗑 حذف</button>`;
     return `<tr>
       <td><strong>${escapeHtml(c.name_ar || '—')}</strong></td>
       <td>${escapeHtml(c.admin_email || '—')}</td>
       <td>${badgeFor(c.status)}</td>
       <td>${escapeHtml(c.plan || '—')}</td>
       <td>${created}</td>
-      <td class="row-actions">${actionBtn}</td>
+      <td class="row-actions">${actionBtn}${deleteBtn}</td>
     </tr>`;
   }).join('');
 }
@@ -238,6 +239,20 @@ async function toggleStatus(companyId, newStatus) {
     await loadCompanies();
   } else {
     alert('تعذّر التنفيذ: ' + (r.error || ''));
+  }
+}
+
+async function deleteCompanyRow(companyId, companyName) {
+  const typed = prompt('ده حذف نهائي — شيت الشركة هيتنقل لسلة مهملات درايف بتاعك.\nاكتب اسم الشركة بالظبط للتأكيد:\n"' + companyName + '"');
+  if (typed !== companyName) {
+    if (typed !== null) alert('الاسم مش مطابق — اتلغى الحذف.');
+    return;
+  }
+  const r = await ApiClient.admin.deleteCompany(companyId);
+  if (r.ok) {
+    await loadCompanies();
+  } else {
+    alert('تعذّر الحذف: ' + (r.error || ''));
   }
 }
 
