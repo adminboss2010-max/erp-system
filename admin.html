@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>لوحة الأدمن — prova</title>
+<meta name="theme-color" content="#0f1b33">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-0:#0a1326; --navy-1:#0f1b33; --navy-2:#1a2744; --navy-3:#243456;
+    --gold-1:#8a6f24; --gold-2:#b8932f; --gold-3:#d9bc8c; --gold-4:#ecd6ad;
+    --ink:#1a2238; --ink-soft:#5a6478; --ink-mute:#8a93a6;
+    --paper:#f7f5ef; --paper-2:#ffffff; --line:#e5e0d2;
+    --danger:#c0392b; --danger-soft:#fdecea;
+    --success:#1f7a4d; --success-soft:#e6f4ec;
+    --warn:#b8860b; --warn-soft:#fdf3dc;
+    --radius:14px; --radius-sm:8px;
+    --shadow-md:0 4px 16px rgba(15,27,51,0.06), 0 12px 40px rgba(15,27,51,0.08);
+    --font-ar:'IBM Plex Sans Arabic', system-ui, sans-serif;
+    --font-display:'Manrope','IBM Plex Sans Arabic', sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font-ar);color:var(--ink);background:var(--paper);min-height:100vh}
+
+  /* ===== Login ===== */
+  #loginStage{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+    background:radial-gradient(120% 80% at 20% 0%, rgba(217,188,140,0.10), transparent 60%),
+               radial-gradient(80% 60% at 100% 100%, rgba(184,147,47,0.12), transparent 60%),
+               linear-gradient(160deg, var(--navy-1) 0%, var(--navy-0) 100%);}
+  .login-card{width:100%;max-width:400px;background:var(--paper-2);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:36px 32px}
+  .login-mark{width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,var(--gold-2),var(--gold-1));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px;margin-bottom:16px}
+  .login-card h1{font-family:var(--font-display);font-size:20px;margin:0 0 4px}
+  .login-card p{color:var(--ink-mute);font-size:13px;margin:0 0 24px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:6px;font-weight:600}
+  .field input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;background:var(--paper)}
+  .field input:focus{outline:2px solid var(--gold-2);outline-offset:1px;border-color:var(--gold-2)}
+  button.primary{width:100%;padding:12px;margin-top:8px;background:var(--navy-1);color:#fff;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}
+  button.primary:hover{background:var(--navy-2)}
+  button.primary:disabled{opacity:.6;cursor:not-allowed}
+  .msg{font-size:13px;margin-top:12px;padding:10px 12px;border-radius:var(--radius-sm);display:none}
+  .msg.error{display:block;background:var(--danger-soft);color:var(--danger)}
+  .msg.success{display:block;background:var(--success-soft);color:var(--success)}
+  .bootstrap-note{font-size:11.5px;color:var(--ink-mute);margin-top:16px;line-height:1.6;padding-top:14px;border-top:1px dashed var(--line)}
+
+  /* ===== Dashboard ===== */
+  #dashStage{display:none;min-height:100vh}
+  header.admhdr{background:var(--navy-1);color:#fff;padding:0 24px;height:60px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10}
+  .admhdr .mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--gold-2),var(--gold-1));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0}
+  .admhdr .title{font-family:var(--font-display);font-weight:700;font-size:14px}
+  .admhdr .sub{font-size:11px;color:rgba(255,255,255,.5)}
+  .admhdr .spacer{flex:1}
+  .admhdr .email{font-size:12px;color:rgba(255,255,255,.7)}
+  .logout-btn{background:rgba(220,38,38,.18);color:#fca5a5;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+  .logout-btn:hover{background:rgba(220,38,38,.3)}
+
+  main{max-width:1200px;margin:0 auto;padding:28px 24px}
+  .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+  .stat-card{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+  .stat-card .num{font-family:var(--font-display);font-size:26px;font-weight:800;color:var(--navy-1)}
+  .stat-card .lbl{font-size:12px;color:var(--ink-mute);margin-top:2px}
+
+  .table-wrap{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:right;padding:12px 14px;background:var(--paper);color:var(--ink-soft);font-weight:700;font-size:11.5px;border-bottom:1px solid var(--line)}
+  td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:rgba(184,147,47,.04)}
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700}
+  .badge.active{background:var(--success-soft);color:var(--success)}
+  .badge.trial{background:var(--warn-soft);color:var(--warn)}
+  .badge.suspended{background:var(--danger-soft);color:var(--danger)}
+  .row-actions{display:flex;gap:6px}
+  .row-actions button{border:none;border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit}
+  .btn-suspend{background:var(--danger-soft);color:var(--danger)}
+  .btn-suspend:hover{background:#f8d7d3}
+  .btn-activate{background:var(--success-soft);color:var(--success)}
+  .btn-activate:hover{background:#d4ecdf}
+  .empty-state{padding:60px 20px;text-align:center;color:var(--ink-mute);font-size:13px}
+</style>
+</head>
+<body>
+
+<div id="loginStage">
+  <div class="login-card">
+    <div class="login-mark">P</div>
+    <h1>لوحة تحكم المنصة</h1>
+    <p>دخول مالك المنصة فقط — إدارة كل الشركات المشتركة</p>
+    <form id="adminLoginForm">
+      <div class="field">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="admEmail" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label>كلمة المرور</label>
+        <input type="password" id="admPassword" required autocomplete="current-password">
+      </div>
+      <button class="primary" type="submit" id="admLoginBtn">دخول</button>
+      <div class="msg" id="admMsg"></div>
+    </form>
+    <div class="bootstrap-note">
+      💡 أول مرة حد يسجّل دخول هنا، الحساب ده بيبقى تلقائيًا هو حساب الأدمن الرئيسي للمنصة. بعد كده، لازم نفس البريد وكلمة المرور بالظبط.
+    </div>
+  </div>
+</div>
+
+<div id="dashStage">
+  <header class="admhdr">
+    <div class="mark">P</div>
+    <div>
+      <div class="title">لوحة تحكم المنصة</div>
+      <div class="sub">كل الشركات المشتركة</div>
+    </div>
+    <div class="spacer"></div>
+    <span class="email" id="admEmailDisplay"></span>
+    <button class="logout-btn" onclick="adminLogout()">⏻ خروج</button>
+  </header>
+  <main>
+    <div class="stats-row" id="statsRow"></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>الشركة</th>
+            <th>البريد الإداري</th>
+            <th>الحالة</th>
+            <th>الخطة</th>
+            <th>تاريخ التسجيل</th>
+            <th>إجراء</th>
+          </tr>
+        </thead>
+        <tbody id="companiesBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none">لا توجد شركات مسجّلة بعد</div>
+    </div>
+  </main>
+</div>
+
+<script src="config.js"></script>
+<script src="api-client.js"></script>
+<script>
+const ADMIN_TOKEN_KEY = 'erp_admin_token';
+const ADMIN_EMAIL_KEY = 'erp_admin_email';
+
+function showMsg(text, type) {
+  const el = document.getElementById('admMsg');
+  el.textContent = text;
+  el.className = 'msg ' + type;
+}
+
+document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('admLoginBtn');
+  btn.disabled = true;
+  showMsg('جارِ الدخول…', 'success');
+  const email = document.getElementById('admEmail').value.trim();
+  const password = document.getElementById('admPassword').value;
+  try {
+    const r = await ApiClient.admin.login(email, password);
+    if (r.ok) {
+      localStorage.setItem(ADMIN_TOKEN_KEY, r.token);
+      localStorage.setItem(ADMIN_EMAIL_KEY, r.admin.email);
+      if (r.bootstrapped) showMsg('تم إنشاء حساب الأدمن الرئيسي بنجاح ✅', 'success');
+      enterDashboard();
+    } else {
+      showMsg(r.error || 'تعذّر الدخول', 'error');
+    }
+  } catch (err) {
+    showMsg('تعذّر الاتصال بالسيرفر', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function adminLogout() {
+  if (!confirm('تسجيل الخروج من لوحة الأدمن؟')) return;
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+  localStorage.removeItem(ADMIN_EMAIL_KEY);
+  location.reload();
+}
+
+async function enterDashboard() {
+  document.getElementById('loginStage').style.display = 'none';
+  document.getElementById('dashStage').style.display = 'block';
+  document.getElementById('admEmailDisplay').textContent = localStorage.getItem(ADMIN_EMAIL_KEY) || '';
+  await loadCompanies();
+}
+
+async function loadCompanies() {
+  const r = await ApiClient.admin.listCompanies();
+  if (!r.ok) {
+    alert('تعذّر تحميل الشركات: ' + (r.error || ''));
+    return;
+  }
+  renderStats(r.companies);
+  renderTable(r.companies);
+}
+
+function renderStats(companies) {
+  const total = companies.length;
+  const active = companies.filter(c => c.status === 'active').length;
+  const trial = companies.filter(c => c.status === 'trial').length;
+  const suspended = companies.filter(c => c.status === 'suspended').length;
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card"><div class="num">${total}</div><div class="lbl">إجمالي الشركات</div></div>
+    <div class="stat-card"><div class="num">${active}</div><div class="lbl">نشطة</div></div>
+    <div class="stat-card"><div class="num">${trial}</div><div class="lbl">تجريبية</div></div>
+    <div class="stat-card"><div class="num">${suspended}</div><div class="lbl">موقوفة</div></div>
+  `;
+}
+
+function badgeFor(status) {
+  const map = { active: ['active', 'نشطة'], trial: ['trial', 'تجريبية'], suspended: ['suspended', 'موقوفة'] };
+  const [cls, label] = map[status] || ['trial', status || '—'];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function renderTable(companies) {
+  const body = document.getElementById('companiesBody');
+  const empty = document.getElementById('emptyState');
+  if (!companies.length) {
+    body.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  body.innerHTML = companies.map(c => {
+    const created = c.created_at ? new Date(c.created_at).toLocaleDateString('ar-EG') : '—';
+    const isSuspended = c.status === 'suspended';
+    const actionBtn = isSuspended
+      ? `<button class="btn-activate" onclick="toggleStatus('${c.id}','active')">تفعيل</button>`
+      : `<button class="btn-suspend" onclick="toggleStatus('${c.id}','suspended')">توقيف</button>`;
+    return `<tr>
+      <td><strong>${escapeHtml(c.name_ar || '—')}</strong></td>
+      <td>${escapeHtml(c.admin_email || '—')}</td>
+      <td>${badgeFor(c.status)}</td>
+      <td>${escapeHtml(c.plan || '—')}</td>
+      <td>${created}</td>
+      <td class="row-actions">${actionBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+async function toggleStatus(companyId, newStatus) {
+  const label = newStatus === 'suspended' ? 'توقيف' : 'تفعيل';
+  if (!confirm(`متأكد من ${label} الشركة دي؟`)) return;
+  const r = await ApiClient.admin.setCompanyStatus(companyId, newStatus);
+  if (r.ok) {
+    await loadCompanies();
+  } else {
+    alert('تعذّر التنفيذ: ' + (r.error || ''));
+  }
+}
+
+// استعادة الجلسة لو موجودة
+(function restoreAdminSession() {
+  const token = localStorage.getItem(ADMIN_TOKEN_KEY);
+  if (token) enterDashboard();
+})();
+</script>
+
+</body>
+</html>
