@@ -107,6 +107,9 @@ const ApiClient = {
     },
     setCompanyStatus(companyId, status) {
       return ApiClient._call('adminSetCompanyStatus', { companyId, status });
+    },
+    createCompany(name_ar, admin_email, password, logo, name_en) {
+      return ApiClient._call('adminCreateCompany', { name_ar, admin_email, password, logo: logo || '', name_en: name_en || '' });
     }
   }
 };
