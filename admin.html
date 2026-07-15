@@ -86,26 +86,11 @@
 </head>
 <body>
 
-<div id="loginStage">
+<div id="loginStage" style="display:none">
   <div class="login-card">
     <div class="login-mark">P</div>
-    <h1>لوحة تحكم المنصة</h1>
-    <p>دخول مالك المنصة فقط — إدارة كل الشركات المشتركة</p>
-    <form id="adminLoginForm">
-      <div class="field">
-        <label>البريد الإلكتروني</label>
-        <input type="email" id="admEmail" required autocomplete="username">
-      </div>
-      <div class="field">
-        <label>كلمة المرور</label>
-        <input type="password" id="admPassword" required autocomplete="current-password">
-      </div>
-      <button class="primary" type="submit" id="admLoginBtn">دخول</button>
-      <div class="msg" id="admMsg"></div>
-    </form>
-    <div class="bootstrap-note">
-      💡 أول مرة حد يسجّل دخول هنا، الحساب ده بيبقى تلقائيًا هو حساب الأدمن الرئيسي للمنصة. بعد كده، لازم نفس البريد وكلمة المرور بالظبط.
-    </div>
+    <h1>جارِ التحويل…</h1>
+    <p>الدخول بقى موحّد من صفحة تسجيل الدخول الرئيسية</p>
   </div>
 </div>
 
@@ -122,6 +107,9 @@
   </header>
   <main>
     <div class="stats-row" id="statsRow"></div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+      <button class="primary" style="width:auto;padding:10px 18px" onclick="openAddCompanyModal()">➕ إضافة شركة جديدة</button>
+    </div>
     <div class="table-wrap">
       <table>
         <thead>
@@ -141,6 +129,24 @@
   </main>
 </div>
 
+<!-- Modal: إضافة شركة جديدة -->
+<div id="addCompanyModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(15,27,51,.5);align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--paper-2);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:28px;width:100%;max-width:420px">
+    <h2 style="font-family:var(--font-display);font-size:18px;margin:0 0 18px">إضافة شركة جديدة</h2>
+    <form id="addCompanyForm">
+      <div class="field"><label>اسم الشركة</label><input type="text" id="newCoName" required></div>
+      <div class="field"><label>البريد الإداري (يستخدمه صاحب الشركة للدخول)</label><input type="email" id="newCoEmail" required></div>
+      <div class="field"><label>كلمة مرور مبدئية</label><input type="text" id="newCoPassword" required minlength="6"></div>
+      <div class="field"><label>رابط شعار الشركة (اختياري)</label><input type="url" id="newCoLogo" placeholder="https://example.com/logo.png"></div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button type="button" onclick="closeAddCompanyModal()" style="flex:1;padding:11px;border-radius:8px;border:1px solid var(--line);background:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">إلغاء</button>
+        <button class="primary" type="submit" id="addCoBtn" style="flex:1;margin-top:0">إنشاء</button>
+      </div>
+      <div class="msg" id="addCoMsg"></div>
+    </form>
+  </div>
+</div>
+
 <script src="config.js"></script>
 <script src="api-client.js"></script>
 <script>
@@ -148,34 +154,8 @@ const ADMIN_TOKEN_KEY = 'erp_admin_token';
 const ADMIN_EMAIL_KEY = 'erp_admin_email';
 
 function showMsg(text, type) {
-  const el = document.getElementById('admMsg');
-  el.textContent = text;
-  el.className = 'msg ' + type;
+  // مبقاش مستخدم هنا (تسجيل الدخول بقى من index.html) — سايبها لحاجة الرسائل التانية لو احتجناها
 }
-
-document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const btn = document.getElementById('admLoginBtn');
-  btn.disabled = true;
-  showMsg('جارِ الدخول…', 'success');
-  const email = document.getElementById('admEmail').value.trim();
-  const password = document.getElementById('admPassword').value;
-  try {
-    const r = await ApiClient.admin.login(email, password);
-    if (r.ok) {
-      localStorage.setItem(ADMIN_TOKEN_KEY, r.token);
-      localStorage.setItem(ADMIN_EMAIL_KEY, r.admin.email);
-      if (r.bootstrapped) showMsg('تم إنشاء حساب الأدمن الرئيسي بنجاح ✅', 'success');
-      enterDashboard();
-    } else {
-      showMsg(r.error || 'تعذّر الدخول', 'error');
-    }
-  } catch (err) {
-    showMsg('تعذّر الاتصال بالسيرفر', 'error');
-  } finally {
-    btn.disabled = false;
-  }
-});
 
 function adminLogout() {
   if (!confirm('تسجيل الخروج من لوحة الأدمن؟')) return;
@@ -261,11 +241,51 @@ async function toggleStatus(companyId, newStatus) {
   }
 }
 
-// استعادة الجلسة لو موجودة
+// استعادة الجلسة — لو مفيش جلسة أدمن، نرجّع لصفحة الدخول الموحّدة
 (function restoreAdminSession() {
   const token = localStorage.getItem(ADMIN_TOKEN_KEY);
-  if (token) enterDashboard();
+  if (token) { enterDashboard(); }
+  else { window.location.href = './index.html'; }
 })();
+
+function openAddCompanyModal() {
+  document.getElementById('addCompanyModal').style.display = 'flex';
+}
+function closeAddCompanyModal() {
+  document.getElementById('addCompanyModal').style.display = 'none';
+  document.getElementById('addCompanyForm').reset();
+  document.getElementById('addCoMsg').className = 'msg';
+}
+
+document.getElementById('addCompanyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('addCoBtn');
+  const msgEl = document.getElementById('addCoMsg');
+  btn.disabled = true;
+  msgEl.textContent = 'جارِ الإنشاء…';
+  msgEl.className = 'msg success';
+  try {
+    const r = await ApiClient.admin.createCompany(
+      document.getElementById('newCoName').value.trim(),
+      document.getElementById('newCoEmail').value.trim(),
+      document.getElementById('newCoPassword').value,
+      document.getElementById('newCoLogo').value.trim()
+    );
+    if (r.ok) {
+      msgEl.textContent = 'تم إنشاء الشركة بنجاح ✅';
+      await loadCompanies();
+      setTimeout(closeAddCompanyModal, 900);
+    } else {
+      msgEl.textContent = r.error || 'تعذّر الإنشاء';
+      msgEl.className = 'msg error';
+    }
+  } catch (err) {
+    msgEl.textContent = 'تعذّر الاتصال بالسيرفر';
+    msgEl.className = 'msg error';
+  } finally {
+    btn.disabled = false;
+  }
+});
 </script>
 
 </body>
