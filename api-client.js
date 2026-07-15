@@ -54,8 +54,8 @@ const ApiClient = {
     login(admin_email, password) {
       return ApiClient._call('login', { admin_email, password }, false);
     },
-    register(name_ar, admin_email, password) {
-      return ApiClient._call('register', { name_ar, admin_email, password }, false);
+    register(name_ar, admin_email, password, logo) {
+      return ApiClient._call('register', { name_ar, admin_email, password, logo: logo || '' }, false);
     }
   },
 
@@ -94,6 +94,19 @@ const ApiClient = {
   audit: {
     get(limit) {
       return ApiClient._call('getAuditLog', { limit: limit || 200 });
+    }
+  },
+
+  // ---------------- Platform Admin (يوزر يشوف كل الشركات) ----------------
+  admin: {
+    login(email, password) {
+      return ApiClient._call('adminLogin', { email, password }, false);
+    },
+    listCompanies() {
+      return ApiClient._call('adminListCompanies', {});
+    },
+    setCompanyStatus(companyId, status) {
+      return ApiClient._call('adminSetCompanyStatus', { companyId, status });
     }
   }
 };
