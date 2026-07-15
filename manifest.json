@@ -1,6 +1,6 @@
 {
-  "name": "نظام التشغيل الموحد — ERP",
-  "short_name": "ERP موحد",
+  "name": "prova — ERP",
+  "short_name": "prova",
   "description": "نظام إدارة مالية وتشغيلية موحّد لعدة شركات",
   "start_url": "./index.html",
   "scope": "./",
