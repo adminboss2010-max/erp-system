@@ -46,7 +46,6 @@ const APP_SHELL = [
   './modules/39-v23.js',
   './modules/40-apply.js',
   './modules/41-rentalesc.js',
-  './modules/42-showgsstatus.js',
   './modules/module-43.js',
   './modules/44-loadamiri.js'
 ];
