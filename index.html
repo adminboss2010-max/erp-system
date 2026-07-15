@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>prova · نظام إدارة الشركات </title>
+<title>prova </title>
 <meta name="theme-color" content="#0f1b33">
 <meta name="description" content="prova — نظام تشغيل موحّد لإدارة الشركات. حساب واحد لكل شركة وبيانات مستقلة بالكامل.">
 <link rel="manifest" href="manifest.json">
@@ -518,12 +518,12 @@
     <section class="brand-hero">
       <span class="eyebrow"><span class="dot"></span>نظام تشغيل موحّد للشركات</span>
       <h1>أدر شركتك<br>بمنطق <span class="accent">واحد متين</span></h1>
-      <p>حساب مستقل لكل شركة، شيت بيانات خاص بيك، وفريق متعدد المستخدمين — كل ده على منصة واحدة مبنية على قاعدة بيانات مرنة وآمنة.</p>
+      <p>حساب مستقل لكل شركة، شيت بيانات خاص بيك، وفريق متعدد المستخدمين — كل ده على منصة واحدة مبنية على Google Sheets كقاعدة بيانات مرنة وآمنة.</p>
 
       <div class="brand-features">
         <div class="feature">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-          <div><strong>قاعدة بيانات مستقلة</strong>ادارة مستقلة لكل شركة</div>
+          <div><strong>قاعدة بيانات مستقلة</strong>شيت منفصل لكل شركة</div>
         </div>
         <div class="feature">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -574,9 +574,8 @@
         <p id="formSubtitle">سجّل دخولك للمتابعة إلى لوحة التحكم، أو أنشئ حساب جديد لشركتك.</p>
       </div>
 
-      <div class="tabs" role="tablist">
+      <div class="tabs" role="tablist" style="display:none">
         <div class="tab active" data-tab="login" role="tab" aria-selected="true">تسجيل الدخول</div>
-        <div class="tab" data-tab="register" role="tab" aria-selected="false">شركة جديدة</div>
       </div>
 
       <!-- Login form -->
@@ -607,40 +606,12 @@
         </button>
       </form>
 
-      <!-- Register form -->
-      <form id="registerForm" autocomplete="on" novalidate style="display:none">
-        <div class="field">
-          <label for="regName">اسم الشركة</label>
-          <div class="input-wrap">
-            <input type="text" id="regName" name="company" placeholder="مثال: شركة النور للتجارة" required autocomplete="organization">
-            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
-          </div>
-        </div>
-        <div class="field">
-          <label for="regEmail">البريد الإلكتروني للمسؤول</label>
-          <div class="input-wrap">
-            <input type="email" id="regEmail" name="email" placeholder="admin@company.com" required autocomplete="email">
-            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>
-          </div>
-        </div>
-        <div class="field">
-          <label for="regPassword">كلمة المرور</label>
-          <div class="input-wrap">
-            <input type="password" id="regPassword" name="password" placeholder="6 أحرف على الأقل" required autocomplete="new-password" minlength="6">
-            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <button type="button" class="toggle-pw" data-target="regPassword" aria-label="إظهار/إخفاء كلمة المرور">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-          </div>
-        </div>
-        <button class="primary" type="submit" id="registerBtn">
-          <span class="btn-text">إنشاء حساب الشركة</span>
-        </button>
-      </form>
+      <!-- Register form: اتشال — إنشاء الشركات بقى صلاحية أدمن بس (عن طريق admin.html) -->
 
       <div class="msg" id="authMsg" role="status" aria-live="polite"></div>
 
       <div class="form-foot">
+        ليس لديك حساب؟ تواصل مع إدارة المنصة لإنشاء حساب شركتك.<br>
         محتاج مساعدة؟ <a href="#support">تواصل مع الدعم</a>
       </div>
     </div>
@@ -681,7 +652,8 @@
       tab.setAttribute('aria-selected','true');
       const isLogin = tab.dataset.tab === 'login';
       $('#loginForm').style.display    = isLogin ? 'flex' : 'none';
-      $('#registerForm').style.display = isLogin ? 'none' : 'flex';
+      const regForm = $('#registerForm');
+      if (regForm) regForm.style.display = isLogin ? 'none' : 'flex';
       $('#authMsg').className = 'msg';
       const t = TAB_TEXT[tab.dataset.tab];
       formTitle.textContent = t.title;
@@ -729,22 +701,32 @@
   async function afterAuth(token, company){
     localStorage.setItem('erp_token', token);
     localStorage.setItem('erp_company', JSON.stringify(company));
-    // تقدر تغيّر المسار ده لمسار تطبيقك
     window.location.href = './app.html';
+  }
+
+  function afterAdminAuth(token, admin){
+    localStorage.setItem('erp_admin_token', token);
+    localStorage.setItem('erp_admin_email', admin.email);
+    window.location.href = './admin.html';
   }
 
   $('#loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = $('#loginBtn');
+    const email = $('#loginEmail').value.trim();
+    const password = $('#loginPassword').value;
     setLoading(btn, true);
     showMsg('جاري التحقق من بياناتك…', 'success');
     try {
-      const r = await ApiClient.auth.login(
-        $('#loginEmail').value.trim(),
-        $('#loginPassword').value
-      );
-      if (r.ok) afterAuth(r.token, r.company);
-      else showMsg(r.error || 'بيانات الدخول غير صحيحة', 'error');
+      // 1) نجرّب دخول شركة الأول
+      const r = await ApiClient.auth.login(email, password);
+      if (r.ok) { afterAuth(r.token, r.company); return; }
+
+      // 2) لو مفيش شركة بالبيانات دي، نجرّب دخول الأدمن تلقائيًا
+      const ra = await ApiClient.admin.login(email, password);
+      if (ra.ok) { afterAdminAuth(ra.token, ra.admin); return; }
+
+      showMsg(r.error || 'بيانات الدخول غير صحيحة', 'error');
     } catch (err) {
       showMsg('تعذّر الاتصال بالسيرفر. حاول مرة تانية.', 'error');
     } finally {
@@ -752,25 +734,7 @@
     }
   });
 
-  $('#registerForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = $('#registerBtn');
-    setLoading(btn, true);
-    showMsg('جاري إنشاء الحساب وتجهيز قاعدة بياناتك…', 'success');
-    try {
-      const r = await ApiClient.auth.register(
-        $('#regName').value.trim(),
-        $('#regEmail').value.trim(),
-        $('#regPassword').value
-      );
-      if (r.ok) afterAuth(r.token, r.company);
-      else showMsg(r.error || 'تعذّر إنشاء الحساب', 'error');
-    } catch (err) {
-      showMsg('تعذّر الاتصال بالسيرفر. حاول مرة تانية.', 'error');
-    } finally {
-      setLoading(btn, false);
-    }
-  });
+  // تسجيل الشركات بقى صلاحية أدمن بس — نموذج التسجيل العام اتشال
 
   // ===== Forgot password placeholder =====
   $('#forgotLink').addEventListener('click', (e) => {
@@ -782,7 +746,11 @@
   (function restoreSession(){
     const token = localStorage.getItem('erp_token');
     const company = localStorage.getItem('erp_company');
-    if (token && company) afterAuth(token, JSON.parse(company));
+    if (token && company) { afterAuth(token, JSON.parse(company)); return; }
+
+    const adminToken = localStorage.getItem('erp_admin_token');
+    const adminEmail = localStorage.getItem('erp_admin_email');
+    if (adminToken && adminEmail) { window.location.href = './admin.html'; }
   })();
 
   // ===== Service worker =====
