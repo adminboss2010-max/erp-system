@@ -25,6 +25,10 @@ const ApiClient = {
     return localStorage.getItem('erp_token');
   },
 
+  _adminToken() {
+    return localStorage.getItem('erp_admin_token');
+  },
+
   // نداء عام لأي action على الـ backend. لو includeToken=false، مش بيبعت
   // التوكين (مستخدم في login/register/ping قبل ما يكون فيه جلسة أصلاً)
   async _call(action, payload, includeToken = true) {
@@ -37,6 +41,23 @@ const ApiClient = {
       const res = await fetch(this._url(), {
         method: 'POST',
         // text/plain يتفادى CORS preflight مع Apps Script
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body)
+      });
+      return await res.json();
+    } catch (e) {
+      return { ok: false, error: (e && e.message) || 'تعذّر الاتصال بالسيرفر' };
+    }
+  },
+
+  // نداء خاص بعمليات الأدمن — بيبعت توكين الأدمن (erp_admin_token) مش توكين الشركة
+  async _callAdmin(action, payload) {
+    const body = Object.assign({ action }, payload || {});
+    const token = this._adminToken();
+    if (token) body.token = token;
+    try {
+      const res = await fetch(this._url(), {
+        method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(body)
       });
@@ -103,16 +124,16 @@ const ApiClient = {
       return ApiClient._call('adminLogin', { email, password }, false);
     },
     listCompanies() {
-      return ApiClient._call('adminListCompanies', {});
+      return ApiClient._callAdmin('adminListCompanies', {});
     },
     setCompanyStatus(companyId, status) {
-      return ApiClient._call('adminSetCompanyStatus', { companyId, status });
+      return ApiClient._callAdmin('adminSetCompanyStatus', { companyId, status });
     },
     createCompany(name_ar, admin_email, password, logo, name_en) {
-      return ApiClient._call('adminCreateCompany', { name_ar, admin_email, password, logo: logo || '', name_en: name_en || '' });
+      return ApiClient._callAdmin('adminCreateCompany', { name_ar, admin_email, password, logo: logo || '', name_en: name_en || '' });
     },
     deleteCompany(companyId) {
-      return ApiClient._call('adminDeleteCompany', { companyId });
+      return ApiClient._callAdmin('adminDeleteCompany', { companyId });
     }
   }
 };
