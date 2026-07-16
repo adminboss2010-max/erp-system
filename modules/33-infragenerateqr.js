@@ -3709,6 +3709,19 @@ const Invoice = {
         ${list.map(inv => {
           const t = this.totals(inv);
           const statusClass = inv.status || 'draft';
+          if (inv.deleted) {
+            return `
+            <div class="invoice-list-row" style="opacity:.55;background:#fdecea">
+              <div class="num" style="text-decoration:line-through">${inv.id}</div>
+              <div style="text-decoration:line-through">${SN(inv.client || '—')}</div>
+              <div>${inv.dt || '—'}</div>
+              <div style="text-decoration:line-through">${KD(t.total)}</div>
+              <div>—</div>
+              <div><span class="invoice-status-pill" style="background:#e74c3c;color:#fff" title="${SN(inv.deleteReason || '')}">🗑 محذوفة</span></div>
+              <div class="actions" style="font-size:11px;color:#7f8c8d">${SN(inv.deleteReason || '')}</div>
+            </div>
+            `;
+          }
           return `
             <div class="invoice-list-row">
               <div class="num">${inv.id}</div>
@@ -3758,6 +3771,7 @@ const Invoice = {
   editInvoice(id) {
     const inv = this.getById(id);
     if (!inv) return;
+    if (inv.deleted) { if (typeof showToast === 'function') showToast('⚠️', 'الفاتورة دي محذوفة ومينفعش تتعدّل', false); return; }
     if (!inv.items || inv.items.length === 0) inv.items = [{ code: '', nm: '', qty: 1, price: 0, discount: 0, tax: 0 }];
     this.editInvoiceObj(inv);
   },
@@ -3777,11 +3791,40 @@ const Invoice = {
   },
 
   deleteInvoice(id) {
-    if (!confirm('حذف الفاتورة ' + id + '؟')) return;
-    this.remove(id);
+    const inv = this.getById(id);
+    if (!inv) return;
+    if (inv.deleted) { if (typeof showToast === 'function') showToast('⚠️', 'الفاتورة دي محذوفة بالفعل', false); return; }
+
+    const reason = prompt('لازم تكتب سبب حذف الفاتورة ' + id + ' (إجباري — للتدقيق):');
+    if (reason === null) return; // اتلغى
+    if (!reason.trim()) {
+      alert('لازم تكتب سبب — الحذف من غير سبب مش مسموح');
+      return;
+    }
+
+    // 🛡️ حذف ناعم فقط: الفاتورة تفضل في القائمة بعلامة "محذوفة" ورقمها التسلسلي
+    // ميترجعش يتستخدم تاني — ده معيار أساسي في أي نظام فوترة رسمي (تدقيق ضريبي/محاسبي)
+    inv.deleted = true;
+    inv.deleteReason = reason.trim();
+    inv.deletedAt = Date.now();
+    inv.deletedBy = (function(){ try { return JSON.parse(localStorage.getItem('erp_company')||'{}').admin_email || ''; } catch(e){ return ''; } })();
+    this.upsert(inv);
+
+    // إلغاء الأثر المالي المرتبط بيها (لو كانت مسجّلة كحركة)
+    if (inv._postedToTx && typeof O !== 'undefined' && O.tx) {
+      const idx = O.tx.findIndex(x => x.invoice === inv.id);
+      if (idx >= 0) O.tx.splice(idx, 1);
+      inv._postedToTx = false;
+      if (typeof nayefSaveData === 'function') nayefSaveData();
+    }
+
+    if (typeof AuditLog !== 'undefined') {
+      try { AuditLog.log('invoice_delete', '🗑 حذف فاتورة', { id: inv.id, reason: inv.deleteReason }); } catch(e) {}
+    }
+
     this.renderSavedList();
     this.renderActionsBar();
-    if (typeof showToast === 'function') showToast('🗑', 'تم حذف الفاتورة', true);
+    if (typeof showToast === 'function') showToast('🗑', 'تم حذف الفاتورة ' + id + ' (السبب مسجّل)', true);
   },
 
   // ───────── محرر الفاتورة ─────────
@@ -4193,9 +4236,16 @@ const Invoice = {
       else if (t.paid > 0) inv.status = 'partial';
     }
     this.upsert(inv);
-    if (typeof showToast === 'function') showToast('✅', 'تم حفظ الفاتورة ' + inv.id, true);
+
+    // 🆕 نظام رسمي بالكامل: أي فاتورة تتحفظ = حركة بيع حقيقية على طول
+    // (بتأثر على الرصيد والمخزون والتقارير وتتزامن مع الشيت فورًا)
+    this.convertToTransaction(true);
+
+    if (typeof showToast === 'function') {
+      showToast('✅', 'تم حفظ الفاتورة ' + inv.id + ' وتسجيلها كحركة بيع', true);
+    }
     if (typeof AuditLog !== 'undefined') {
-      try { AuditLog.log('invoice_save', '🧾 حفظ فاتورة', { id: inv.id, total: t.total, client: inv.client }); } catch(e) {}
+      try { AuditLog.log('invoice_save', '🧾 حفظ فاتورة', { id: inv.id, total: t.total, client: inv.client, status: inv.status }); } catch(e) {}
     }
     this.renderSavedList();
     this.renderActionsBar();
@@ -4245,7 +4295,7 @@ const Invoice = {
     }
   },
 
-  convertToTransaction() {
+  convertToTransaction(silent) {
     if (!this._currentInv) return;
     const inv = this._currentInv;
     const t = this.totals(inv);
@@ -4257,9 +4307,11 @@ const Invoice = {
       if (typeof showToast === 'function') showToast('❌', 'نظام المعاملات غير جاهز', false);
       return;
     }
-    // بناء حركة للعميل
+    O.tx = O.tx || [];
+    // 🛡️ لو الفاتورة دي اتسجّلت كحركة قبل كده، نحدّث نفس الحركة بدل ما نكرّرها
+    const existingIdx = O.tx.findIndex(x => x.invoice === inv.id);
     const tx = {
-      id: 'TX-' + Date.now(),
+      id: existingIdx >= 0 ? O.tx[existingIdx].id : ('TX-' + Date.now()),
       dt: inv.dt,
       client: inv.client,
       cl: inv.client,
@@ -4273,10 +4325,10 @@ const Invoice = {
       ts: Date.now(),
       _v: (typeof SEED !== 'undefined' && SEED._v) || 'auto',
     };
-    O.tx = O.tx || [];
-    O.tx.push(tx);
+    if (existingIdx >= 0) O.tx[existingIdx] = tx; else O.tx.push(tx);
+    inv._postedToTx = true;
     if (typeof nayefSaveData === 'function') nayefSaveData();
-    if (typeof showToast === 'function') showToast('✅', 'تم تسجيل الحركة على حساب ' + inv.client, true);
+    if (!silent && typeof showToast === 'function') showToast('✅', 'تم تسجيل الحركة على حساب ' + inv.client, true);
     if (typeof AuditLog !== 'undefined') {
       try { AuditLog.log('invoice_to_tx', '🧾→💼 تحويل فاتورة لحركة', { invoice: inv.id, client: inv.client, amount: t.total }); } catch(e) {}
     }
