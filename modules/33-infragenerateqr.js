@@ -1,4 +1,3 @@
-
 /* ════════════════════════════════════════════════════════════════════
    ☁️ Infrastructure Layer - Cloud Sync + Audit + Mobile + Alerts
    الفئة الخامسة - البنية التحتية التقنية
@@ -1963,8 +1962,20 @@ const StorageV2 = {
     // 🌐 مزامنة سحابية (Cloud Sync) — حفظ نسخة كاملة (backup سريع الاستعادة) في شيت AppState
     try {
       var token = localStorage.getItem('erp_token');
-      if (token && window.ApiClient) {
-        ApiClient.state.save(data).catch(function (e) { if (typeof Logger !== 'undefined') Logger.warn('Cloud save failed:', e); });
+      if (!token) {
+        if (window.__setRealCloudBadge) window.__setRealCloudBadge('#dc2626', '#fee2e2', '❌ لا توجد جلسة دخول صالحة — سجّل خروج وادخل تاني');
+      } else if (!window.ApiClient) {
+        if (window.__setRealCloudBadge) window.__setRealCloudBadge('#dc2626', '#fee2e2', '❌ ملف api-client.js مش محمّل');
+      } else {
+        ApiClient.state.save(data).then(function (r) {
+          if (window.__setRealCloudBadge) {
+            if (r && r.ok) window.__setRealCloudBadge('#059669', '#dcfce7', '🟢 تم الحفظ في السحابة الآن');
+            else window.__setRealCloudBadge('#dc2626', '#fee2e2', '🔴 فشل حفظ آخر تعديل — ' + (r && r.error ? r.error : 'سبب غير معروف'));
+          }
+        }).catch(function (e) {
+          if (typeof Logger !== 'undefined') Logger.warn('Cloud save failed:', e);
+          if (window.__setRealCloudBadge) window.__setRealCloudBadge('#dc2626', '#fee2e2', '🔴 فشل الاتصال بالسيرفر أثناء الحفظ');
+        });
 
         // 🆕 مزامنة صفوف مقروءة في شيتات الشركة الفعلية (المعاملات/العملاء/المناديب/الأصناف)
         this.syncStructuredSheets(data);
