@@ -111,6 +111,14 @@ const ApiClient = {
     }
   },
 
+  // ---------------- Company Profile (المصدر الموحّد لبيانات الشركة) ----------------
+  company: {
+    // fields: { name_ar, name_en, logo, phone, address, cr_number, vat_number, bank_info }
+    updateProfile(fields) {
+      return ApiClient._call('updateCompanyProfile', fields);
+    }
+  },
+
   // ---------------- Audit Log (جاهزة لأي لوحة تحكم مستقبلية) ----------------
   audit: {
     get(limit) {
