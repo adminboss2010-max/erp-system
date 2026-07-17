@@ -16,10 +16,15 @@ function getRealCompanyBranding() {
         name: c.name_ar,
         logo: c.logo || c.name_ar.trim().charAt(0),
         email: c.admin_email || '',
+        phone: c.phone || '',
+        address: c.address || '',
+        cr: c.cr_number || '',
+        vat: c.vat_number || '',
+        bank: c.bank_info || '',
       };
     }
   } catch (e) {}
-  return { name: 'شركتك', logo: 'ش', email: '' };
+  return { name: 'شركتك', logo: 'ش', email: '', phone: '', address: '', cr: '', vat: '', bank: '' };
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -1774,6 +1779,8 @@ function pageStatement(pg, S, T) {
           <p class="statement-tagline">كشف حساب العميل والمعاملات المستحقة</p>
           <div class="statement-contact">
             <span>📧 ${getRealCompanyBranding().email || '—'}</span>
+            ${getRealCompanyBranding().phone ? '<span>📞 ' + getRealCompanyBranding().phone + '</span>' : ''}
+            ${getRealCompanyBranding().address ? '<span>📍 ' + getRealCompanyBranding().address + '</span>' : ''}
           </div>
         </div>
         <div class="statement-title-block">
@@ -2480,6 +2487,8 @@ function pageAgentStatement(pg) {
           <p class="statement-tagline">كشف حساب المندوب والعمولات المستحقة</p>
           <div class="statement-contact">
             <span>📧 ${getRealCompanyBranding().email || '—'}</span>
+            ${getRealCompanyBranding().phone ? '<span>📞 ' + getRealCompanyBranding().phone + '</span>' : ''}
+            ${getRealCompanyBranding().address ? '<span>📍 ' + getRealCompanyBranding().address + '</span>' : ''}
           </div>
         </div>
         <div class="statement-title-block">
@@ -3553,7 +3562,12 @@ const Invoice = {
           companyName: company.name_ar || this.defaultSettings.companyName,
           companyTagline: company.name_en || '',
           companyLogo: company.logo || (company.name_ar ? company.name_ar.trim().charAt(0) : this.defaultSettings.companyLogo),
-          companyEmail: company.admin_email || ''
+          companyEmail: company.admin_email || '',
+          companyPhone: company.phone || '',
+          companyAddress: company.address || '',
+          companyCr: company.cr_number ? ('سجل تجاري: ' + company.cr_number) : this.defaultSettings.companyCr,
+          companyVat: company.vat_number ? ('رقم ضريبي: ' + company.vat_number) : this.defaultSettings.companyVat,
+          bankInfo: company.bank_info || this.defaultSettings.bankInfo
         };
       }
     } catch (e) {}
