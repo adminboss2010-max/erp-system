@@ -11411,7 +11411,8 @@ async function saveNewTransaction() {
     client: client,
     cl: client,
     i: inv,
-    items: [['R-NEW', 1, amount, amount]],
+    items: [], // 🛡️ ملهاش صنف حقيقي — ده إدخال مالي عام (زي دفعة/تحصيل)، مش حركة مخزون.
+               // البيع الحقيقي اللي بيأثر على المخزون لازم يعدّي من شاشة "الفواتير".
     amount: amount,
     cost: 0,
     tp: type,
