@@ -9482,6 +9482,7 @@ button[onclick*="PrintEngine.print"] {
   </header>
 
   <div id="proMorePanel">
+    <button type="button" onclick="openCompanyProfileModal();document.getElementById('proMorePanel').classList.remove('open')" style="font-weight:800;color:#0f172a">🏢 بيانات الشركة</button>
     <button type="button" onclick="(typeof naifPrintReports==='function')?naifPrintReports():null;document.getElementById('proMorePanel').classList.remove('open')">📊 التقارير</button>
     <button type="button" onclick="(typeof exportPDF==='function')?exportPDF():window.print();document.getElementById('proMorePanel').classList.remove('open')">📄 تصدير PDF</button>
     <button type="button" onclick="(typeof v23PrintNow==='function')?v23PrintNow():window.print();document.getElementById('proMorePanel').classList.remove('open')">🖨️ طباعة فورية</button>
@@ -9493,6 +9494,134 @@ button[onclick*="PrintEngine.print"] {
 
   <nav id="proSidebar"></nav>
 </div>
+
+<!-- 🏢 نافذة بيانات الشركة — المصدر الموحّد لكل بيانات الشركة في النظام -->
+<div id="companyProfileModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(15,23,42,.5);align-items:center;justify-content:center;padding:20px;font-family:'Tajawal','IBM Plex Sans Arabic',sans-serif">
+  <div style="background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:28px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <h2 style="font-size:18px;margin:0;color:#0f172a">🏢 بيانات الشركة</h2>
+      <button type="button" onclick="closeCompanyProfileModal()" style="background:#f1f5f9;border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px">×</button>
+    </div>
+    <p style="font-size:12.5px;color:#64748b;margin:0 0 20px">
+      المكان الوحيد لتعديل بيانات شركتك — أي تعديل هنا بيظهر تلقائيًا في كل الصفحات والفواتير وكشوف الحساب.
+    </p>
+    <form id="companyProfileForm">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="display:block;font-size:12px;color:#475569;margin-bottom:5px;font-weight:600">اسم الشركة (عربي)</label>
+          <input type="text" id="cpName" required style="width:100%;padding:9px 11px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:#475569;margin-bottom:5px;font-weight:600">Company Name (EN)</label>
+          <input type="text" id="cpNameEn" style="width:100%;padding:9px 11px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box">
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:12px;color:#475569;margin-bottom:5px;font-weight:600">رابط شعار الشركة</label>
+        <input type="url" id="cpLogo" placeholder="https://example.com/logo.png" style="width:100%;padding:9px 11px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="display:block;font-size:12px;color:#475569;margin-bottom:5px;font-weight:600">رقم الهاتف</label>
+          <input type="text" id="cpPhone" placeholder="+965 ..." style="width:100%;padding:9px 11px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:#475569;margin-bottom:5px;font-weight:600">البريد (للدخول — لا يتغيّر هنا)</label>
+          <input type="text" id="cpEmail" disabled style="width:100%;padding:9px 11px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:13px;background:#f8fafc;color:#94a3b8;box-sizing:border-box">
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:12px;color:#475569;margin-bottom:5px;font-weight:600">العنوان</label>
+        <input type="text" id="cpAddress" style="width:100%;padding:9px 11px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="display:block;font-size:12px;color:#475569;margin-bottom:5px;font-weight:600">رقم السجل التجاري</label>
+          <input type="text" id="cpCr" style="width:100%;padding:9px 11px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:#475569;margin-bottom:5px;font-weight:600">الرقم الضريبي</label>
+          <input type="text" id="cpVat" style="width:100%;padding:9px 11px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box">
+        </div>
+      </div>
+      <div style="margin-bottom:18px">
+        <label style="display:block;font-size:12px;color:#475569;margin-bottom:5px;font-weight:600">بيانات الحساب البنكي (اختياري)</label>
+        <input type="text" id="cpBank" placeholder="اسم البنك - رقم الحساب" style="width:100%;padding:9px 11px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box">
+      </div>
+      <div style="display:flex;gap:10px">
+        <button type="button" onclick="closeCompanyProfileModal()" style="flex:1;padding:11px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">إلغاء</button>
+        <button type="submit" id="cpSaveBtn" style="flex:1;padding:11px;border-radius:8px;border:none;background:#0f172a;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💾 حفظ</button>
+      </div>
+      <div id="cpMsg" style="font-size:12.5px;margin-top:10px;padding:9px 11px;border-radius:8px;display:none"></div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openCompanyProfileModal() {
+  try {
+    const c = JSON.parse(localStorage.getItem('erp_company') || '{}');
+    document.getElementById('cpName').value = c.name_ar || '';
+    document.getElementById('cpNameEn').value = c.name_en || '';
+    document.getElementById('cpLogo').value = c.logo || '';
+    document.getElementById('cpPhone').value = c.phone || '';
+    document.getElementById('cpEmail').value = c.admin_email || '';
+    document.getElementById('cpAddress').value = c.address || '';
+    document.getElementById('cpCr').value = c.cr_number || '';
+    document.getElementById('cpVat').value = c.vat_number || '';
+    document.getElementById('cpBank').value = c.bank_info || '';
+  } catch (e) {}
+  document.getElementById('companyProfileModal').style.display = 'flex';
+}
+function closeCompanyProfileModal() {
+  document.getElementById('companyProfileModal').style.display = 'none';
+  document.getElementById('cpMsg').style.display = 'none';
+}
+document.getElementById('companyProfileForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  const btn = document.getElementById('cpSaveBtn');
+  const msg = document.getElementById('cpMsg');
+  btn.disabled = true;
+  msg.style.display = 'block';
+  msg.style.background = '#dcfce7'; msg.style.color = '#059669';
+  msg.textContent = 'جارِ الحفظ…';
+  try {
+    const fields = {
+      name_ar: document.getElementById('cpName').value.trim(),
+      name_en: document.getElementById('cpNameEn').value.trim(),
+      logo: document.getElementById('cpLogo').value.trim(),
+      phone: document.getElementById('cpPhone').value.trim(),
+      address: document.getElementById('cpAddress').value.trim(),
+      cr_number: document.getElementById('cpCr').value.trim(),
+      vat_number: document.getElementById('cpVat').value.trim(),
+      bank_info: document.getElementById('cpBank').value.trim()
+    };
+    const r = await ApiClient.company.updateProfile(fields);
+    if (r.ok) {
+      localStorage.setItem('erp_company', JSON.stringify(r.company));
+      // تحديث فوري لهيدر النظام من غير ما تحتاج تعمل Reload
+      var nameEl = document.getElementById('proBrandName');
+      var markEl = document.getElementById('proBrandMark');
+      if (nameEl) nameEl.textContent = r.company.name_ar;
+      if (markEl) {
+        if (r.company.logo) markEl.innerHTML = '<img src="' + r.company.logo.replace(/"/g,'&quot;') + '" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">';
+        else markEl.textContent = (r.company.name_ar || 'ن').trim().charAt(0);
+      }
+      msg.textContent = 'تم الحفظ بنجاح ✅';
+      setTimeout(closeCompanyProfileModal, 900);
+    } else {
+      msg.style.background = '#fee2e2'; msg.style.color = '#dc2626';
+      msg.textContent = r.error || 'تعذّر الحفظ';
+    }
+  } catch (err) {
+    msg.style.background = '#fee2e2'; msg.style.color = '#dc2626';
+    msg.textContent = 'تعذّر الاتصال بالسيرفر';
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+
 
 <script>
 (function() {
