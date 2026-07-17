@@ -83,6 +83,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // 🆕 version.json و version-check.js لازم يوصلوا مباشرة من السيرفر دايماً
+  // (لو اتخزنوا في الكاش، آلية التحديث الإجباري نفسها هتفضل تقرا نسخة قديمة)
+  if (url.includes('version.json') || url.includes('version-check.js')) {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' }).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
   // Cache-first لملفات الواجهة
   event.respondWith(
     caches.match(event.request).then((cached) => {
