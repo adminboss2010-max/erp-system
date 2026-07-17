@@ -6,6 +6,22 @@
 (function(){
 'use strict';
 
+// 🆕 بيانات الشركة الحقيقية (نفس المصدر اللي بيغذّي هيدر النظام) — تُستخدم
+// في كل قوالب الطباعة (كشوف الحساب، الفواتير) بدل الأسماء الوهمية الثابتة
+function getRealCompanyBranding() {
+  try {
+    const c = JSON.parse(localStorage.getItem('erp_company') || 'null');
+    if (c && c.name_ar) {
+      return {
+        name: c.name_ar,
+        logo: c.logo || c.name_ar.trim().charAt(0),
+        email: c.admin_email || '',
+      };
+    }
+  } catch (e) {}
+  return { name: 'شركتك', logo: 'ش', email: '' };
+}
+
 // ════════════════════════════════════════════════════════════════════
 // 📋 AUDIT LOG - سجل التدقيق
 // ════════════════════════════════════════════════════════════════════
@@ -1752,14 +1768,12 @@ function pageStatement(pg, S, T) {
           <button class="statement-action-btn" onclick="(window.PrintEngine&amp;&amp;window.PrintEngine.showPreview?window.PrintEngine.showPreview(['customers'],{search:document.getElementById('statementClient')?.value}):window.print())" title="تقرير عميل شامل" style="background:linear-gradient(135deg,#7d4f9e,#a855f7)">📈</button>
         </div>
         
-        <div class="statement-logo">غ</div>
+        <div class="statement-logo">${getRealCompanyBranding().logo}</div>
         <div class="statement-company-info">
-          <h1>شركتك</h1>
-          <p class="statement-tagline">ومنتجاتها الفهوة والشاي والكاو والبهارات</p>
+          <h1>${getRealCompanyBranding().name}</h1>
+          <p class="statement-tagline">كشف حساب العميل والمعاملات المستحقة</p>
           <div class="statement-contact">
-            <span>📞 +965 9999 5555</span>
-            <span>📧 info@yourcompany.com</span>
-            <span>📍 الكويت - حولي</span>
+            <span>📧 ${getRealCompanyBranding().email || '—'}</span>
           </div>
         </div>
         <div class="statement-title-block">
@@ -2460,14 +2474,12 @@ function pageAgentStatement(pg) {
           <button class="statement-action-btn" onclick="exportAgentStatementExcel()" title="تصدير Excel">📊</button>
           <button class="statement-action-btn" onclick="(window.PrintEngine&amp;&amp;window.PrintEngine.showPreview?window.PrintEngine.showPreview(['agents'],{search:document.getElementById('agentStmtAgent')?.value||''}):window.print())" title="تقرير مندوب شامل" style="background:linear-gradient(135deg,#7d4f9e,#a855f7)">📈</button>
         </div>
-        <div class="statement-logo">ن</div>
+        <div class="statement-logo">${getRealCompanyBranding().logo}</div>
         <div class="statement-company-info">
-          <h1>شركتك</h1>
+          <h1>${getRealCompanyBranding().name}</h1>
           <p class="statement-tagline">كشف حساب المندوب والعمولات المستحقة</p>
           <div class="statement-contact">
-            <span>📞 +965 9999 5555</span>
-            <span>📧 info@yourcompany.com</span>
-            <span>📍 الكويت - حولي</span>
+            <span>📧 ${getRealCompanyBranding().email || '—'}</span>
           </div>
         </div>
         <div class="statement-title-block">
@@ -3531,10 +3543,25 @@ const Invoice = {
 
   // ───────── تحميل البيانات ─────────
   getSettings() {
+    // 🆕 لو المستخدم لسه ماخصّصش إعدادات الفاتورة بنفسه، نجيب بيانات شركته
+    // الحقيقية (نفس الاسم واللوجو الظاهرين في هيدر النظام) بدل الحقول الوهمية
+    let companyDefaults = {};
+    try {
+      const company = JSON.parse(localStorage.getItem('erp_company') || 'null');
+      if (company) {
+        companyDefaults = {
+          companyName: company.name_ar || this.defaultSettings.companyName,
+          companyTagline: company.name_en || '',
+          companyLogo: company.logo || (company.name_ar ? company.name_ar.trim().charAt(0) : this.defaultSettings.companyLogo),
+          companyEmail: company.admin_email || ''
+        };
+      }
+    } catch (e) {}
+
     try {
       const saved = JSON.parse(localStorage.getItem(this.SETTINGS_KEY) || 'null');
-      return Object.assign({}, this.defaultSettings, saved || {});
-    } catch(e) { return Object.assign({}, this.defaultSettings); }
+      return Object.assign({}, this.defaultSettings, companyDefaults, saved || {});
+    } catch(e) { return Object.assign({}, this.defaultSettings, companyDefaults); }
   },
   saveSettings(s) {
     localStorage.setItem(this.SETTINGS_KEY, JSON.stringify(s));
