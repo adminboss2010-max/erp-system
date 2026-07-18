@@ -1980,37 +1980,73 @@ const StorageV2 = {
       Logger.warn('StorageV2 IDB failed:', e);
     }
 
-    // 🌐 مزامنة سحابية (Cloud Sync) — حفظ نسخة كاملة (backup سريع الاستعادة) في شيت AppState
+    // 🌐 مزامنة سحابية (Cloud Sync) — عبر نسخة مؤجلة (debounce) لمنع إرسال عشرات
+    // الطلبات لو المستخدم يعدّل بسرعة (كتابة، تعديل جدول، إلخ)؛ يُرسل فقط آخر نسخة
+    // من البيانات بعد توقف التعديل لمدة قصيرة، مما يقلل الحمل على السيرفر ويحسّن الاستجابة.
+    this._getCloudPushDebounced()(data);
+
+    return { ok: lsOk || idbOk, lsOk: lsOk, idbOk: idbOk, ts: ts, size: json.length };
+  },
+
+  // 🆕 يرجّع نسخة مؤجّلة (debounced) من _pushToCloud، تُبنى مرة واحدة وتُعاد نفس النسخة
+  // في كل استدعاء لاحق حتى تعمل آلية التأجيل بشكل صحيح (نفس الـ timer يُعاد ضبطه في كل نداء).
+  _getCloudPushDebounced() {
+    if (!this._cloudPushDebounced) {
+      const self = this;
+      const pushFn = function (data) { self._pushToCloud(data); };
+      this._cloudPushDebounced = (window.PerfUtils && typeof window.PerfUtils.debounce === 'function')
+        ? window.PerfUtils.debounce(pushFn, 900)
+        : pushFn; // fallback: إرسال فوري لو أداة الـ debounce غير متوفرة لأي سبب
+    }
+    return this._cloudPushDebounced;
+  },
+
+  // 🆕 الرفع الفعلي لآخر نسخة من البيانات إلى السحابة (Google Sheets عبر Apps Script)
+  // + حفظ نسخة كاملة (backup سريع الاستعادة) في شيت AppState
+  async _pushToCloud(data) {
     try {
       var token = localStorage.getItem('erp_token');
       if (!token) {
         if (window.__setRealCloudBadge) window.__setRealCloudBadge('#dc2626', '#fee2e2', '❌ لا توجد جلسة دخول صالحة — سجّل خروج وادخل تاني');
-      } else if (!window.ApiClient) {
-        if (window.__setRealCloudBadge) window.__setRealCloudBadge('#dc2626', '#fee2e2', '❌ ملف api-client.js مش محمّل');
-      } else {
-        var expectedRev = localStorage.getItem('nayef_state_rev');
-        ApiClient.state.save(data, expectedRev !== null ? Number(expectedRev) : undefined).then(function (r) {
-          if (r && r.ok) {
-            if (r.rev !== undefined) { try { localStorage.setItem('nayef_state_rev', String(r.rev)); } catch (e) {} }
-            if (window.__setRealCloudBadge) window.__setRealCloudBadge('#059669', '#dcfce7', '🟢 تم الحفظ في السحابة الآن');
-          } else if (r && r.conflict) {
-            // 🛡️ تعارض حفظ حقيقي: جهاز تاني حفظ بعدك — لازم نحدّث قبل أي حفظ تاني
-            if (window.__setRealCloudBadge) window.__setRealCloudBadge('#dc2626', '#fee2e2', '⚠️ فيه تعديل من جهاز تاني — حدّث الصفحة (F5) قبل ما تكمل');
-            if (typeof showToast === 'function') showToast('⚠️ تعارض بيانات', 'حد تاني حفظ من جهاز مختلف بعد آخر تحميل عندك. حدّث الصفحة الأول عشان متفقدش تعديلاتك', false);
-          } else {
-            if (window.__setRealCloudBadge) window.__setRealCloudBadge('#dc2626', '#fee2e2', '🔴 فشل حفظ آخر تعديل — ' + (r && r.error ? r.error : 'سبب غير معروف'));
-          }
-        }).catch(function (e) {
-          if (typeof Logger !== 'undefined') Logger.warn('Cloud save failed:', e);
-          if (window.__setRealCloudBadge) window.__setRealCloudBadge('#dc2626', '#fee2e2', '🔴 فشل الاتصال بالسيرفر أثناء الحفظ');
-        });
-
-        // 🆕 مزامنة صفوف مقروءة في شيتات الشركة الفعلية (المعاملات/العملاء/المناديب/الأصناف)
-        this.syncStructuredSheets(data);
+        return;
       }
-    } catch (e) {}
+      if (!window.ApiClient) {
+        if (window.__setRealCloudBadge) window.__setRealCloudBadge('#dc2626', '#fee2e2', '❌ ملف api-client.js مش محمّل');
+        return;
+      }
 
-    return { ok: lsOk || idbOk, lsOk: lsOk, idbOk: idbOk, ts: ts, size: json.length };
+      var expectedRev = localStorage.getItem('nayef_state_rev');
+      const r = await ApiClient.state.save(data, expectedRev !== null ? Number(expectedRev) : undefined);
+
+      if (r && r.ok) {
+        if (r.rev !== undefined) { try { localStorage.setItem('nayef_state_rev', String(r.rev)); } catch (e) {} }
+        if (window.__setRealCloudBadge) window.__setRealCloudBadge('#059669', '#dcfce7', '🟢 تم الحفظ في السحابة الآن');
+      } else if (r && r.conflict) {
+        // 🛡️ تعارض حفظ حقيقي: جهاز/متصفح تاني حفظ بعدك.
+        // 🆕 بدل ما نسيب المستخدم يعمل F5 يدوياً (وممكن ما يلاحظ التحذير أصلاً ويكمل يشتغل
+        // فوق بيانات قديمة)، نجيب آخر نسخة من السحابة تلقائياً ونحدّث الشاشة والـ rev المحلي،
+        // عشان الحفظة الجاية تنجح بدل ما تتكرر نفس المشكلة.
+        if (window.__setRealCloudBadge) window.__setRealCloudBadge('#f59e0b', '#fef3c7', '⚠️ فيه تعديل من جهاز تاني — جاري التحديث تلقائياً...');
+        try {
+          const cr = await this._loadFromCloud();
+          if (cr && cr.data && typeof window.O !== 'undefined') {
+            Object.assign(window.O, cr.data);
+            if (typeof nayefSaveData === 'function') nayefSaveData();
+            if (typeof draw === 'function') setTimeout(draw, 300);
+          }
+        } catch (e) {}
+        if (window.__setRealCloudBadge) window.__setRealCloudBadge('#f59e0b', '#fef3c7', '🔄 تم التحديث من جهاز آخر — تأكد من آخر عملية أدخلتها');
+        if (typeof showToast === 'function') showToast('⚠️ تعارض بيانات', 'حد تاني حفظ من جهاز مختلف بعد آخر تحميل عندك. تم جلب أحدث نسخة تلقائياً — من فضلك تأكد إن آخر عملية أدخلتها موجودة، وأعد إدخالها لو ما ظهرت', false);
+      } else {
+        if (window.__setRealCloudBadge) window.__setRealCloudBadge('#dc2626', '#fee2e2', '🔴 فشل حفظ آخر تعديل — ' + (r && r.error ? r.error : 'سبب غير معروف'));
+      }
+
+      // 🆕 مزامنة صفوف مقروءة في شيتات الشركة الفعلية (المعاملات/العملاء/المناديب/الأصناف)
+      this.syncStructuredSheets(data);
+    } catch (e) {
+      if (typeof Logger !== 'undefined') Logger.warn('Cloud save failed:', e);
+      if (window.__setRealCloudBadge) window.__setRealCloudBadge('#dc2626', '#fee2e2', '🔴 فشل الاتصال بالسيرفر أثناء الحفظ');
+    }
   },
 
   // 🆕 يحوّل بيانات النظام (O) لصفوف مقروءة ويكتبها في شيتات الشركة الحقيقية
@@ -2078,8 +2114,18 @@ const StorageV2 = {
     }
   },
 
-  async load() {
+  // 🆕 opts.forceCloud: لو true، نحاول السحابة أولاً قبل أي مصدر محلي.
+  // تُستخدم عند فتح النظام لأول مرة على متصفح/جهاز جديد لا يملك أي كاش محلي بعد،
+  // لضمان جلب أحدث بيانات الشركة الحقيقية من السيرفر مباشرة بدل انتظار فشل كل المصادر المحلية.
+  async load(opts = {}) {
     let data = null, source = null;
+    const forceCloud = !!opts.forceCloud;
+
+    if (forceCloud) {
+      const cr = await this._loadFromCloud();
+      if (cr.data) return cr;
+      // فشلت السحابة (بدون إنترنت مثلاً) → نكمل ونجرب المصادر المحلية كخطة بديلة
+    }
 
     // 1) localStorage plain JSON (fastest)
     try {
@@ -2114,23 +2160,63 @@ const StorageV2 = {
 
     // 4) السحابة (Apps Script backend) — مرجع أخير، ومصدر البيانات الحقيقي لأي جهاز/متصفح جديد
     if (!data) {
-      try {
-        var token = localStorage.getItem('erp_token');
-        if (token && window.ApiClient) {
-          const json = await ApiClient.state.load();
-          if (json && json.ok && json.state && Object.keys(json.state).length) {
-            data = json.state;
-            source = 'cloud';
-            try { localStorage.setItem('nayef_data_v2', JSON.stringify(data)); } catch (e) {}
-          }
-          if (json && json.ok && json.rev !== undefined) {
-            try { localStorage.setItem('nayef_state_rev', String(json.rev)); } catch (e) {}
-          }
-        }
-      } catch (e) {}
+      const cr = await this._loadFromCloud();
+      if (cr.data) { data = cr.data; source = cr.source; }
     }
 
     return { data: data, source: source };
+  },
+
+  // 🆕 دالة مستقلة لجلب البيانات من السحابة فقط (بدون أي فحص لمصادر محلية)،
+  // تُستخدم من load() ومن مسار معالجة تعارض الحفظ في _pushToCloud().
+  async _loadFromCloud() {
+    try {
+      var token = localStorage.getItem('erp_token');
+      if (token && window.ApiClient) {
+        const json = await ApiClient.state.load();
+        if (json && json.ok && json.state && Object.keys(json.state).length) {
+          try { localStorage.setItem('nayef_data_v2', JSON.stringify(json.state)); } catch (e) {}
+          if (json.rev !== undefined) { try { localStorage.setItem('nayef_state_rev', String(json.rev)); } catch (e) {} }
+          return { data: json.state, source: 'cloud' };
+        }
+        if (json && json.ok && json.rev !== undefined) {
+          try { localStorage.setItem('nayef_state_rev', String(json.rev)); } catch (e) {}
+        }
+      }
+    } catch (e) {}
+    return { data: null, source: null };
+  },
+
+  // 🆕 مراقب خلفي: يفحص بشكل دوري (كل 90 ثانية افتراضياً) هل رقم نسخة البيانات (rev)
+  // في السحابة تغيّر عن آخر نسخة عندك — أي إن مستخدم/جهاز آخر حفظ بيانات جديدة بينما
+  // أنت شغال. لا يقوم بأي استبدال تلقائي للبيانات أثناء عملك (تفادياً لمقاطعة عملية
+  // إدخال جارية)، فقط يعرض شارة تنبيه قابلة للضغط لتحديث الصفحة يدوياً وقت ما يناسبك.
+  startBackgroundSyncWatcher(intervalMs = 90000) {
+    if (this._watcherStarted) return; // لا تشغّل أكثر من مراقب واحد بالخطأ
+    this._watcherStarted = true;
+
+    setInterval(async () => {
+      try {
+        const token = localStorage.getItem('erp_token');
+        if (!token || !window.ApiClient || document.hidden) return; // لا داعي للفحص لو التبويب غير ظاهر
+
+        const json = await ApiClient.state.load();
+        if (!json || !json.ok || json.rev === undefined) return;
+
+        const localRev = localStorage.getItem('nayef_state_rev');
+        const serverRev = String(json.rev);
+
+        if (localRev !== null && serverRev !== localRev) {
+          if (window.__setRealCloudBadge) {
+            window.__setRealCloudBadge('#2563eb', '#dbeafe', '🔔 فيه تحديثات جديدة من جهاز آخر — اضغط هنا لتحديث الصفحة');
+          }
+          if (typeof showToast === 'function' && !this._updateNoticeShown) {
+            this._updateNoticeShown = true; // نبيّن التنبيه مرة وحدة بس بالجلسة عشان ما نزعج المستخدم
+            showToast('🔔 تحديثات جديدة', 'فيه بيانات جديدة اتحفظت من جهاز/متصفح آخر. حدّث الصفحة (F5) لما تخلص شغلك الحالي عشان تشوفها', true);
+          }
+        }
+      } catch (e) { /* صمت تام هنا: أي خطأ فحص دوري ما يستاهل إزعاج المستخدم */ }
+    }, intervalMs);
   },
 
   async _idbSave(key, value) {
