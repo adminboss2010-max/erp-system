@@ -82,8 +82,10 @@ const ApiClient = {
 
   // ---------------- State (نسخة كاملة، للتحميل السريع) ----------------
   state: {
-    save(state) {
-      return ApiClient._call('saveState', { state });
+    save(state, expectedRev) {
+      var payload = { state: state };
+      if (expectedRev !== undefined && expectedRev !== null) payload.expectedRev = expectedRev;
+      return ApiClient._call('saveState', payload);
     },
     load() {
       return ApiClient._call('loadState', {});
