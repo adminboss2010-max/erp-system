@@ -103,7 +103,9 @@ const ApiClient = {
     save(state, expectedRev) {
       const payload = { state: state };
       if (expectedRev !== undefined && expectedRev !== null) {
+        // Support both the former expectedRev contract and the secured backend's revision contract.
         payload.expectedRev = expectedRev;
+        payload.revision = expectedRev;
       }
       return ApiClient._call('saveState', payload);
     },
