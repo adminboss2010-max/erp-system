@@ -622,7 +622,7 @@
 <script src="version-check.js"></script>
 <script src="api-client.js"></script>
 <script>
-  // ===== Helpers =====
+// ===== Helpers =====
   const $ = (s, c=document) => c.querySelector(s);
   const $$ = (s, c=document) => Array.from(c.querySelectorAll(s));
 
@@ -632,53 +632,54 @@
     const text = $('#pingText');
     try {
       const r = await ApiClient.auth.ping();
-      if (r.ok) { pill.classList.add('ok'); text.textContent = 'متصل بالسيرفر'; }
-      else throw new Error();
+      if (r.ok) { 
+        pill.className = 'status-pill ok'; 
+        text.textContent = 'متصل بالسيرفر'; 
+      } else {
+        throw new Error();
+      }
     } catch (e) {
-      pill.classList.add('bad'); text.textContent = 'غير متصل — تحقّق من config.js';
+      pill.className = 'status-pill bad'; 
+      text.textContent = 'غير متصل — تحقّق من config.js';
     }
   })();
-
-  // ===== Tabs =====
-  const formTitle = $('#formTitle');
-  const formSubtitle = $('#formSubtitle');
-  const TAB_TEXT = {
-    login:    { title: 'أهلاً بيك في prova',         sub: 'سجّل دخولك للمتابعة إلى لوحة التحكم.' },
-    register: { title: 'أنشئ حساب شركتك',            sub: 'ابدأ رحلتك مع prova — بياناتك في شيت مستقل خاص بيك.' }
-  };
-  $$('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      $$('.tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
-      tab.classList.add('active');
-      tab.setAttribute('aria-selected','true');
-      const isLogin = tab.dataset.tab === 'login';
-      $('#loginForm').style.display    = isLogin ? 'flex' : 'none';
-      const regForm = $('#registerForm');
-      if (regForm) regForm.style.display = isLogin ? 'none' : 'flex';
-      $('#authMsg').className = 'msg';
-      const t = TAB_TEXT[tab.dataset.tab];
-      formTitle.textContent = t.title;
-      formSubtitle.textContent = t.sub;
-    });
-  });
 
   // ===== Toggle password =====
   $$('.toggle-pw').forEach(btn => {
     btn.addEventListener('click', () => {
       const el = document.getElementById(btn.dataset.target);
-      el.type = el.type === 'password' ? 'text' : 'password';
+      if (el) el.type = el.type === 'password' ? 'text' : 'password';
     });
   });
 
-  // ===== Messages =====
+  // ===== Messages (🛡️ آمنة ومحمية من ثغرات الـ XSS) =====
   function showMsg(text, type){
     const el = $('#authMsg');
     el.className = 'msg ' + type;
-    el.innerHTML = `
-      ${type === 'error'
-        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>'
-        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'}
-      <span>${text}</span>`;
+    
+    // تنظيف المحتوى أولاً
+    el.innerHTML = '';
+    
+    // إنشاء عنصر الأيقونة بناءً على النوع
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "2");
+    
+    if (type === 'error') {
+      svg.innerHTML = '<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>';
+    } else {
+      svg.innerHTML = '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>';
+    }
+    
+    // استخدام textContent حصراً لحقن النصوص لمنع الـ HTML Injection
+    const span = document.createElement('span');
+    span.textContent = text;
+    
+    el.appendChild(svg);
+    el.appendChild(span);
   }
 
   function setLoading(btn, on){
@@ -699,7 +700,7 @@
   }
 
   // ===== Auth flow =====
-  async function afterAuth(token, company){
+  function afterAuth(token, company){
     localStorage.setItem('erp_token', token);
     localStorage.setItem('erp_company', JSON.stringify(company));
     window.location.href = './app.html';
@@ -716,26 +717,39 @@
     const btn = $('#loginBtn');
     const email = $('#loginEmail').value.trim();
     const password = $('#loginPassword').value;
+    
+    if (!email || !password) {
+      showMsg('يرجى إدخال البريد الإلكتروني وكلمة المرور', 'error');
+      return;
+    }
+
     setLoading(btn, true);
     showMsg('جاري التحقق من بياناتك…', 'success');
+    
     try {
-      // 1) نجرّب دخول شركة الأول
+      // 1) نجرّب دخول شركة أولاً
       const r = await ApiClient.auth.login(email, password);
-      if (r.ok) { afterAuth(r.token, r.company); return; }
+      if (r.ok) { 
+        afterAuth(r.token, r.company); 
+        return; 
+      }
 
-      // 2) لو مفيش شركة بالبيانات دي، نجرّب دخول الأدمن تلقائيًا
+      // 2) إذا لم تكن شركة، نجرّب دخول الأدمن بشكل منفصل وآمن
       const ra = await ApiClient.admin.login(email, password);
-      if (ra.ok) { afterAdminAuth(ra.token, ra.admin); return; }
+      if (ra.ok) { 
+        afterAdminAuth(ra.token, ra.admin); 
+        return; 
+      }
 
-      showMsg(r.error || 'بيانات الدخول غير صحيحة', 'error');
+      // إرجاع رسالة الخطأ المحددة من السيرفر بأمان
+      showMsg(r.error || ra.error || 'بيانات الدخول غير صحيحة', 'error');
     } catch (err) {
+      console.error("Login client error:", err);
       showMsg('تعذّر الاتصال بالسيرفر. حاول مرة تانية.', 'error');
     } finally {
       setLoading(btn, false);
     }
   });
-
-  // تسجيل الشركات بقى صلاحية أدمن بس — نموذج التسجيل العام اتشال
 
   // ===== Forgot password placeholder =====
   $('#forgotLink').addEventListener('click', (e) => {
@@ -743,15 +757,20 @@
     showMsg('لو نسيت كلمة المرور، تواصل مع مدير النظام لإعادة الضبط.', 'error');
   });
 
-  // ===== Restore session =====
+  // ===== Restore session (🛡️ تم عزلها لتجنب التوجيه التلقائي للتوكينات المنتهية قبل الفحص) =====
   (function restoreSession(){
     const token = localStorage.getItem('erp_token');
     const company = localStorage.getItem('erp_company');
-    if (token && company) { afterAuth(token, JSON.parse(company)); return; }
+    if (token && company) { 
+      window.location.href = './app.html'; 
+      return; 
+    }
 
     const adminToken = localStorage.getItem('erp_admin_token');
     const adminEmail = localStorage.getItem('erp_admin_email');
-    if (adminToken && adminEmail) { window.location.href = './admin.html'; }
+    if (adminToken && adminEmail) { 
+      window.location.href = './admin.html'; 
+    }
   })();
 
   // ===== Service worker =====
