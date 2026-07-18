@@ -1,4 +1,4 @@
-const CACHE_NAME = 'erp-shell-v3';
+const CACHE_NAME = 'erp-shell-v2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -47,8 +47,7 @@ const APP_SHELL = [
   './modules/40-apply.js',
   './modules/41-rentalesc.js',
   './modules/module-43.js',
-  './modules/44-loadamiri.js',
-  './modules/45-server-only.js'
+  './modules/44-loadamiri.js'
 ];
 
 self.addEventListener('install', (event) => {
