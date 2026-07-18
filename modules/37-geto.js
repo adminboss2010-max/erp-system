@@ -1761,3 +1761,4 @@
 
   console.log('[PWA] module ready');
 })();
+})();
