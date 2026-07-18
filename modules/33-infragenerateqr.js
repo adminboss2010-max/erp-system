@@ -1988,10 +1988,17 @@ const StorageV2 = {
       } else if (!window.ApiClient) {
         if (window.__setRealCloudBadge) window.__setRealCloudBadge('#dc2626', '#fee2e2', '❌ ملف api-client.js مش محمّل');
       } else {
-        ApiClient.state.save(data).then(function (r) {
-          if (window.__setRealCloudBadge) {
-            if (r && r.ok) window.__setRealCloudBadge('#059669', '#dcfce7', '🟢 تم الحفظ في السحابة الآن');
-            else window.__setRealCloudBadge('#dc2626', '#fee2e2', '🔴 فشل حفظ آخر تعديل — ' + (r && r.error ? r.error : 'سبب غير معروف'));
+        var expectedRev = localStorage.getItem('nayef_state_rev');
+        ApiClient.state.save(data, expectedRev !== null ? Number(expectedRev) : undefined).then(function (r) {
+          if (r && r.ok) {
+            if (r.rev !== undefined) { try { localStorage.setItem('nayef_state_rev', String(r.rev)); } catch (e) {} }
+            if (window.__setRealCloudBadge) window.__setRealCloudBadge('#059669', '#dcfce7', '🟢 تم الحفظ في السحابة الآن');
+          } else if (r && r.conflict) {
+            // 🛡️ تعارض حفظ حقيقي: جهاز تاني حفظ بعدك — لازم نحدّث قبل أي حفظ تاني
+            if (window.__setRealCloudBadge) window.__setRealCloudBadge('#dc2626', '#fee2e2', '⚠️ فيه تعديل من جهاز تاني — حدّث الصفحة (F5) قبل ما تكمل');
+            if (typeof showToast === 'function') showToast('⚠️ تعارض بيانات', 'حد تاني حفظ من جهاز مختلف بعد آخر تحميل عندك. حدّث الصفحة الأول عشان متفقدش تعديلاتك', false);
+          } else {
+            if (window.__setRealCloudBadge) window.__setRealCloudBadge('#dc2626', '#fee2e2', '🔴 فشل حفظ آخر تعديل — ' + (r && r.error ? r.error : 'سبب غير معروف'));
           }
         }).catch(function (e) {
           if (typeof Logger !== 'undefined') Logger.warn('Cloud save failed:', e);
@@ -2115,6 +2122,9 @@ const StorageV2 = {
             data = json.state;
             source = 'cloud';
             try { localStorage.setItem('nayef_data_v2', JSON.stringify(data)); } catch (e) {}
+          }
+          if (json && json.ok && json.rev !== undefined) {
+            try { localStorage.setItem('nayef_state_rev', String(json.rev)); } catch (e) {}
           }
         }
       } catch (e) {}
