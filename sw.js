@@ -1,4 +1,4 @@
-const CACHE_NAME = 'erp-shell-v2';
+const CACHE_NAME = 'erp-shell-v3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -54,7 +54,6 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       // نكاش كل ملف لوحده — لو ملف واحد ناقص أو فيه 404، الباقي يتخزن عادي
-      // (cache.addAll العادي بيفشل بالكامل لو ملف واحد بس فشل)
       return Promise.all(
         APP_SHELL.map((url) =>
           cache.add(url).catch((e) => console.warn('[SW] تعذّر كاش:', url, e && e.message))
@@ -83,8 +82,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 🆕 version.json و version-check.js لازم يوصلوا مباشرة من السيرفر دايماً
-  // (لو اتخزنوا في الكاش، آلية التحديث الإجباري نفسها هتفضل تقرا نسخة قديمة)
+  // version.json و version-check.js لازم يوصلوا مباشرة من السيرفر دايماً
   if (url.includes('version.json') || url.includes('version-check.js')) {
     event.respondWith(
       fetch(event.request, { cache: 'no-store' }).catch(() => caches.match(event.request))
@@ -92,14 +90,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first لملفات الواجهة
+  // 🛠️ إصلاح جذري: Network-first بدل Cache-first لكل ملفات النظام.
+  // السبب: Cache-first كان بيخلي كل متصفح/جهاز يفضل شغّال على نسخة كود
+  // مختلفة حسب امتى فتح النظام أول مرة — نفس الشركة ممكن تشوف نتائج
+  // مختلفة تمامًا من براوزر لبراوزر. دلوقتي: نجيب النسخة الحيّة من
+  // السيرفر كل مرة، ونستخدم الكاش كـ fallback بس لو النت مقطوع فعليًا.
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request).then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        return response;
-      }).catch(() => cached);
-    })
+    fetch(event.request, { cache: 'no-store' }).then((response) => {
+      const clone = response.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+      return response;
+    }).catch(() => caches.match(event.request))
   );
 });
