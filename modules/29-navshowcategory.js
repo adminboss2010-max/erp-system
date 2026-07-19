@@ -1,4 +1,3 @@
-
 // 🆕 v220.8.3+ NAVIGATION TABS: نظام تبويبات ديناميكي
 const NAV_CATEGORIES = {
   overview: {
@@ -27,6 +26,8 @@ const NAV_CATEGORIES = {
       { pg: 'agentStatement', icon: '👤', label: 'كشف المندوب', title: 'مبيعات، تحصيل، عمولات' },
       { pg: 'mo', icon: '📈', label: 'التحليل الشهري', title: 'تطور المبيعات والتحصيل عبر الزمن' },
       { pg: 'lg', icon: '📜', label: 'سجل المعاملات', title: 'الحركات التفصيلية مع البحث' },
+      { fn: 'v23Commissions', icon: '💰', label: 'عمولات المناديب', title: 'حساب عمولات كل المناديب تلقائيًا' },
+      { fn: 'v23ModalApi', icon: '🔌', label: 'مفاتيح API', title: 'إدارة مفاتيح API وWebhooks' },
     ],
   },
   analytics: {
@@ -39,6 +40,7 @@ const NAV_CATEGORIES = {
       { pg: 'offers', icon: '🎁', label: 'عروض الجمعيات', title: 'تصنيف الجمعيات والعروض المقترحة' },
       { pg: 'cp', icon: '⚖️', label: 'مقارنة الفترات', title: 'مقارنة الأداء بين فترتين' },
       { pg: 'fc', icon: '🔮', label: 'التنبؤ', title: 'توقعات المبيعات للأشهر القادمة' },
+      { fn: 'v23ModalRfm', icon: '🎯', label: 'تصنيف RFM', title: 'تقسيم العملاء حسب القيمة والنشاط' },
     ],
   },
   strategy: {
