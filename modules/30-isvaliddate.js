@@ -4152,9 +4152,6 @@ function nayefSaveData() {
       _v: (typeof SEED !== 'undefined' && SEED._v) ? SEED._v : (O._v || 'auto-save'),  // يستخدم SEED._v مباشرة
       _timestamp: Date.now(),
     };
-    // 🆕 نحفظ نفس الـ timestamp على O الحيّ نفسه (لا يُكتب فوقه لاحقاً بالغلط)
-    // عشان أي مقارنة "محلي مقابل سحابة" (مثل bootstrap عند فتح الصفحة) تكون دقيقة.
-    O._timestamp = snapshot._timestamp;
     localStorage.setItem(DATA_BACKUP_KEY, JSON.stringify(snapshot));
     localStorage.setItem(DATA_TIMESTAMP_KEY, Date.now().toString());
     
@@ -4218,7 +4215,6 @@ function nayefRestoreData() {
       ? seed.txTypes
       : (typeof DEFAULT_TX_TYPES !== 'undefined' ? JSON.parse(JSON.stringify(DEFAULT_TX_TYPES)) : []);
     O._v = seed._v || 'restored';
-    O._timestamp = seed._timestamp || 0;
     
     Logger.info('✅ تم استرجاع البيانات:', O.soc.length, 'عميل،', O.tx.length, 'معاملة');
     
@@ -5002,72 +4998,41 @@ setInterval(() => {
   }
 }, 1000); // كل ثانية (بدلاً من 5) للاستجابة الأسرع
 
-// استرجاع فوري عند التحميل (من الكاش المحلي القديم - يعطي عرض أولي سريع بدون انتظار الشبكة)
+// استرجاع فوري عند التحميل (محلي — سريع، بس ممكن يكون قديم)
 const wasRestored = nayefRestoreData();
 
-// 🆕 v221+ إصلاح جذري: مزامنة سحابية موثوقة عند فتح الصفحة
-// ─────────────────────────────────────────────────────────────────────────
-// ⚠️ السبب الجذري للمشكلة السابقة: هذا الكود كان ينفّذ مباشرة (synchronous)
-// أثناء تحميل هذا الملف (modules/30-isvaliddate.js)، لكن window.StorageV2
-// لا يُعرَّف إلا لاحقاً في modules/33-infragenerateqr.js الذي يُحمَّل بعده في
-// app.html. نتيجة ذلك: الشرط "window.StorageV2" كان يفشل دائماً، والاسترجاع
-// من السحابة كان كوداً ميتاً لا يعمل أبداً — فأي متصفح/جهاز جديد يفتح النظام
-// يبدأ بحالة فارغة بدل سحب بيانات الشركة الحقيقية من السحابة.
-//
-// ✅ الحل: تأجيل التنفيذ لحدث DOMContentLoaded (يضمن أن كل السكربتات المتزامنة
-// بما فيها StorageV2 قد نُفِّذت بالكامل)، + مطابقة زمنية (timestamp) بين النسخة
-// المحلية والسحابية بدل الاكتفاء بشرط "لا توجد بيانات محلية إطلاقاً"، حتى لو
-// كان فيه كاش محلي قديم من جلسة سابقة، نتأكد إننا نعرض دائماً أحدث نسخة فعلية.
-function nayefBootstrapCloudSync() {
-  if (typeof window === 'undefined' || !window.StorageV2) {
-    Logger.warn('⚠️ StorageV2 غير محمّل بعد — تعذّرت محاولة المزامنة السحابية عند فتح الصفحة');
-    return;
-  }
-
-  const hasToken = !!localStorage.getItem('erp_token');
-  if (!hasToken) return; // لا توجد جلسة دخول بعد (شاشة تسجيل الدخول)، لا داعي لمحاولة الاتصال بالسحابة
-
-  window.StorageV2.load({ forceCloud: !wasRestored }).then(r => {
-    if (!r || !r.data) return;
-    const cloudHasContent = r.data.soc || r.data.it || r.data.tx;
-    if (!cloudHasContent) return;
-
-    const cloudTs = Number(r.data._timestamp || 0);
-    const localTs = Number((wasRestored && O && O._timestamp) || 0);
-
-    // نستبدل بنسخة السحابة فقط إذا: (أ) ما فيه بيانات محلية أصلاً على هذا المتصفح،
-    // أو (ب) نسخة السحابة أحدث فعلياً (تاريخ تعديل أكبر) من النسخة المحلية.
-    // هذا يمنع استبدال تعديلات حديثة لسه ما وصلت للسحابة بنسخة سحابية أقدم بالغلط.
-    if (!wasRestored || cloudTs > localTs) {
-      Logger.info('✅ StorageV2: استعادة من', r.source, '(cloudTs=' + cloudTs + ', localTs=' + localTs + ')');
+// 🛠️ إصلاح جذري: السحابة لازم تتفحص دايمًا (مش بس لو الاسترجاع المحلي فشل).
+// قبل كده: لو أي جهاز لقى أي نسخة محلية عنده (حتى لو قديمة جدًا)، كان
+// النظام بيوقف عند كده ومبيسألش السحابة خالص — يعني نفس الجهاز يفضل
+// "متقفل" على آخر نسخة شافها هو بس، وميشوفش تعديلات أي جهاز تاني أبدًا.
+// دلوقتي: السحابة بتتفحص كل مرة، ولو فيها بيانات، بتحل محل النسخة
+// المحلية القديمة فورًا مع إعادة رسم الشاشة.
+if (typeof window !== 'undefined' && window.StorageV2) {
+  window.StorageV2.load().then(r => {
+    if (r && r.data && (r.data.soc || r.data.it || r.data.tx) && r.source === 'cloud') {
+      Logger.info('☁️ تحديث من السحابة (المصدر الحقيقي) — استبدال أي نسخة محلية قديمة');
+      try {
+        Object.assign(O, r.data);
+        window.O = O;
+        if (typeof auditAndRecomputeTotals === 'function') { try { auditAndRecomputeTotals(O); } catch(e) {} }
+        if (typeof recompute === 'function') { try { recompute(); } catch(e) {} }
+        setTimeout(() => { if (typeof draw === 'function') draw(); }, 100);
+      } catch(e) { Logger.warn('Cloud override failed:', e); }
+    } else if (!wasRestored && r && r.data && (r.data.soc || r.data.it || r.data.tx)) {
+      // مفيش سحابة (أوفلاين) ومفيش نسخة محلية أصلاً — نستخدم أي نسخة احتياطية لقيناها (IndexedDB/مشفّرة)
+      Logger.info('✅ StorageV2: استعادة من', r.source);
       try {
         Object.assign(O, r.data);
         window.O = O;
         if (typeof nayefSaveData === 'function') nayefSaveData();
-        if (typeof showToast === 'function') {
-          showToast('☁️ مزامنة', 'تم تحديث البيانات من السحابة (' + r.source + ')', true);
-        }
+        if (typeof showToast === 'function') showToast('📦 استعادة', 'تم استرجاع البيانات من ' + r.source, true);
         setTimeout(() => { if (typeof draw === 'function') draw(); }, 500);
-      } catch (e) { Logger.warn('StorageV2 restore:', e); }
-    } else {
-      Logger.info('ℹ️ StorageV2: النسخة المحلية أحدث من أو تساوي نسخة السحابة — لا حاجة للاستبدال');
+      } catch(e) { Logger.warn('StorageV2 restore:', e); }
     }
-  }).catch(e => { Logger.warn('StorageV2 cloud sync failed:', e && e.message); });
+  }).catch(e => {});
 
   // Auto-backup أسبوعي
-  setTimeout(() => window.StorageV2 && window.StorageV2.autoBackupCheck && window.StorageV2.autoBackupCheck(), 3000);
-
-  // 🆕 تفعيل المراقب الخلفي: تنبيه لطيف لو حد تاني حفظ بيانات جديدة وأنت شغال بنفس الوقت
-  if (window.StorageV2.startBackgroundSyncWatcher) {
-    window.StorageV2.startBackgroundSyncWatcher();
-  }
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', nayefBootstrapCloudSync);
-} else {
-  // نادراً ما يصير هذا لسكربت متزامن بدون defer/async، لكن للأمان في حال تغيّر ترتيب التحميل مستقبلاً
-  nayefBootstrapCloudSync();
+  setTimeout(() => window.StorageV2 && window.StorageV2.autoBackupCheck(), 3000);
 }
 
 if(wasRestored) {
