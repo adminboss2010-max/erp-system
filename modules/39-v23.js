@@ -1,4 +1,3 @@
-
 /* ═══════════════════════════════════════════════════════════════════
    v230.2+ COMPLETE FALLBACK PRINT + COMPONENTS SYSTEM
    - يعمل بدون الاعتماد على modules خارجية
@@ -1106,7 +1105,7 @@ ${(low+out)>0 ? `<div style="background:#ffebee;border-right:3pt solid #c62828;p
   };
   
   window.v23PrintFromGlobal = function() {
-    v23Modal();
+    v23QuickPrintPreview();
   };
   
   /* === 4. البحث === */
@@ -1298,7 +1297,10 @@ ${(low+out)>0 ? `<div style="background:#ffebee;border-right:3pt solid #c62828;p
 
       <div id="v23-comm-body">${v23RenderCommissionsTable(agents, cfg, fromDate || defaultFrom, toDate || defaultTo)}</div>
 
-      <button onclick="v23ExportCommissionsCSV()" style="margin-top:12px;width:100%;padding:10px;background:#2e7d32;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:13px;">📥 تصدير Excel</button>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button onclick="window.print()" style="flex:1;padding:10px;background:#1a2744;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:13px;">🖨 طباعة</button>
+        <button onclick="v23ExportCommissionsCSV()" style="flex:1;padding:10px;background:#2e7d32;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:13px;">📥 تصدير Excel</button>
+      </div>
     `);
   };
 
@@ -1551,7 +1553,8 @@ ${(low+out)>0 ? `<div style="background:#ffebee;border-right:3pt solid #c62828;p
       </div>
     `).join('');
     
-    document.getElementById('v23-rfm-result').innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">${cards}</div>`;
+    document.getElementById('v23-rfm-result').innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">${cards}</div>
+      <button onclick="window.print()" style="margin-top:12px;width:100%;padding:10px;background:#1a2744;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:13px;">🖨 طباعة</button>`;
   };
   
   /* === 10. Backup === */
