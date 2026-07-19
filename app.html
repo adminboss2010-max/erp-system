@@ -9483,14 +9483,24 @@ button[onclick*="PrintEngine.print"] {
 
   <div id="proMorePanel">
     <button type="button" onclick="openCompanyProfileModal();document.getElementById('proMorePanel').classList.remove('open')" style="font-weight:800;color:#0f172a">🏢 بيانات الشركة</button>
-    <button type="button" onclick="(typeof naifPrintReports==='function')?naifPrintReports():null;document.getElementById('proMorePanel').classList.remove('open')">📊 التقارير</button>
-    <button type="button" onclick="(typeof exportPDF==='function')?exportPDF():window.print();document.getElementById('proMorePanel').classList.remove('open')">📄 تصدير PDF</button>
-    <button type="button" onclick="(typeof v23PrintNow==='function')?v23PrintNow():window.print();document.getElementById('proMorePanel').classList.remove('open')">🖨️ طباعة فورية</button>
-    <button type="button" onclick="(typeof window.v23FloatingToggle==='function')?window.v23FloatingToggle():null;document.getElementById('proMorePanel').classList.remove('open')">🧰 أدوات إضافية</button>
-    <button type="button" onclick="(typeof openInfraPanel==='function')?openInfraPanel():null;document.getElementById('proMorePanel').classList.remove('open')">☁️ البنية التحتية</button>
-    <button type="button" onclick="(typeof autoUpdate==='function')?autoUpdate():location.reload();document.getElementById('proMorePanel').classList.remove('open')">🔄 تحديث</button>
-    <button type="button" onclick="document.getElementById('kcSettingsBtn')&amp;&amp;document.getElementById('kcSettingsBtn').click();document.getElementById('proMorePanel').classList.remove('open')">🎨 الثيم والإعدادات</button>
+    <button type="button" id="proInstallBtn" onclick="(window.deferredPwaPrompt) ? (window.deferredPwaPrompt.prompt(), window.deferredPwaPrompt.userChoice.then(function(){window.deferredPwaPrompt=null;})) : alert('التطبيق مثبّت بالفعل أو متصفحك مايدعمش التثبيت المباشر — استخدم قائمة المتصفح (⋮) واختر \'تثبيت التطبيق\''); document.getElementById('proMorePanel').classList.remove('open')" style="display:none">📲 تثبيت التطبيق</button>
   </div>
+
+  <script>
+  (function() {
+    window.addEventListener('beforeinstallprompt', function(e) {
+      e.preventDefault();
+      window.deferredPwaPrompt = e;
+      var btn = document.getElementById('proInstallBtn');
+      if (btn) btn.style.display = 'flex';
+    });
+    window.addEventListener('appinstalled', function() {
+      window.deferredPwaPrompt = null;
+      var btn = document.getElementById('proInstallBtn');
+      if (btn) btn.style.display = 'none';
+    });
+  })();
+  </script>
 
   <nav id="proSidebar"></nav>
 </div>
@@ -9664,7 +9674,10 @@ document.getElementById('companyProfileForm').addEventListener('submit', async f
       html += '<span>' + cat.icon + '</span><span>' + cat.title + '</span><span class="proCatArrow">◀</span>';
       html += '</button><div class="proNavPages">';
       cat.pages.forEach(function(p) {
-        html += '<button type="button" class="proNavPageBtn" data-pg="' + p.pg + '" title="' + p.title + '" onclick="sw(\'' + p.pg + '\', this); document.querySelectorAll(\'.proNavPageBtn\').forEach(function(b){b.classList.remove(\'active\')}); this.classList.add(\'active\')">';
+        var action = p.fn
+          ? "(typeof " + p.fn + "==='function')?" + p.fn + "():alert('الميزة دي محتاجة بيانات أكتر لسه')"
+          : "sw('" + p.pg + "', this); document.querySelectorAll('.proNavPageBtn').forEach(function(b){b.classList.remove('active')}); this.classList.add('active')";
+        html += '<button type="button" class="proNavPageBtn" data-pg="' + (p.pg || p.fn) + '" title="' + p.title + '" onclick="' + action + '">';
         html += '<span>' + p.icon + '</span><span>' + p.label + '</span>';
         html += '</button>';
       });
@@ -9933,7 +9946,7 @@ document.getElementById('companyProfileForm').addEventListener('submit', async f
         <span class="v23-toggle-arrow" id="v23-floating-arrow">▼</span>
       </button>
       <div id="v23-floating-menu" aria-label="قائمة الأدوات الإضافية">
-        <button onclick="v23Modal()" title="يختار 9 تقارير + Letterhead">
+        <button onclick="v23QuickPrintPreview()" title="يختار 9 تقارير + Letterhead">
           <span>📋</span><span>اختر تقرير</span>
         </button>
         <button onclick="v23Search()" title="بحث Ctrl+K في البيانات الحقيقية">
