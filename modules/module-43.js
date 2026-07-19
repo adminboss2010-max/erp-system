@@ -1,4 +1,3 @@
-
 // NAIF v2.3 Standalone Print (يعمل 100% بدون script 38)
 (function() {
   'use strict';
@@ -65,7 +64,9 @@
   };
   
   // v23Modal - يفتح PrintEngine أو طباعة
-  window.v23Modal = function() {
+  // 🛠️ إصلاح: كان اسمها v23Modal وده كان بيبوّظ الدالة الأصلية v23Modal(title, html)
+  // المستخدمة في عمولات المناديب وRFM وAPI — استخدام مباشر (زرار report picker اتشال أصلاً)
+  window.v23QuickPrintPreview = function() {
     if (window.PrintEngine && window.PrintEngine.showPreview) {
       window.PrintEngine.showPreview(['executive']);
     } else {
