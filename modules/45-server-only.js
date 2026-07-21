@@ -76,11 +76,21 @@
   storageApi.load = function () { return loadFromServer(); };
   window.StorageV2 = storageApi;
 
+  const debouncedSave = (window.PerfUtils && typeof window.PerfUtils.debounce === 'function')
+    ? window.PerfUtils.debounce(function (data) {
+        saveToServer(data).catch(function (error) {
+          if (typeof Logger !== 'undefined') Logger.warn('Server-only save failed:', error);
+          if (window.__setRealCloudBadge) window.__setRealCloudBadge('#dc2626', '#fee2e2', 'فشل الحفظ على الخادم');
+        });
+      }, 900)
+    : function (data) {
+        saveToServer(data).catch(function (error) {
+          if (typeof Logger !== 'undefined') Logger.warn('Server-only save failed:', error);
+        });
+      };
+
   window.nayefSaveData = function () {
-    saveToServer(stateSnapshot()).catch(function (error) {
-      if (typeof Logger !== 'undefined') Logger.warn('Server-only save failed:', error);
-      if (window.__setRealCloudBadge) window.__setRealCloudBadge('#dc2626', '#fee2e2', 'فشل الحفظ على الخادم');
-    });
+    debouncedSave(stateSnapshot());
   };
 
   // Remove every user-facing import path, including files dropped onto the page.
