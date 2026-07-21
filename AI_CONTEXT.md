@@ -66,7 +66,12 @@
 
 **إذا كنت تقرأ هذا لاحقًا**: تحقق من `app.html` هل يوجد `<script src="modules/45-server-only.js">` أم لا، وهل `importJSONBackup`/`importExcelFile`/`handleExcelFile` ما زالت موجودة، لمعرفة إن كانت هذه الخطوة اكتملت أم لا.
 
-**✅ حالة التنفيذ وقت آخر تحديث**: تم حذف زر "استيراد ملف" ومدخل `importBackupInput` فعليًا من `app.html` باستخدام `github_str_replace` (كانا في نطاق الأسطر ~10729-10733)، وتم التأكد من عدم وجود `importBackupInput`/`استيراد ملف`/`handleExcelFile`/`importExcelFile` في النسخة الحالية على GitHub. زر "تصدير نسخة" وزر "طباعة الصفحة" بقيا كما هما دون تغيير. **الخطوة المتبقية**: تفعيل `modules/45-server-only.js` نفسه (لم يُفعَّل بعد — لا يوجد `<script src="modules/45-server-only.js">` في app.html وقت آخر تحديث) لتغطية أي عناصر استيراد مستقبلية تلقائيًا، مع دمج تحسينات الأداء (Debounce، معالجة التعارض) المذكورة بالقسم 3.
+**✅ حالة التنفيذ وقت آخر تحديث — القرار اكتمل بالكامل**:
+1. تم حذف زر "استيراد ملف" ومدخل `importBackupInput` فعليًا من `app.html` (كانا في نطاق الأسطر ~10729-10733)، وتم التأكد من عدم وجود `importBackupInput`/`استيراد ملف`/`handleExcelFile`/`importExcelFile` في النسخة الحالية. زر "تصدير نسخة" وزر "طباعة الصفحة" بقيا كما هما دون تغيير.
+2. تم دمج تحسين الأداء (Debounce 900ms عبر `window.PerfUtils.debounce` مع fallback بدونه) داخل `window.nayefSaveData` فى `modules/45-server-only.js` نفسه، قبل استدعاء `saveToServer`.
+3. تم تفعيل `modules/45-server-only.js` فعليًا بإضافة `<script src="modules/45-server-only.js"></script>` فى `app.html` مباشرة بعد `<script src="modules/33-infragenerateqr.js"></script>` — أي بعد تعريف `window.StorageV2`، وهو الترتيب الصحيح المطلوب حتى لا يفشل الشرط `window.StorageV2` كما حدث فى المشكلة التاريخية بالقسم 3.
+
+**ملاحظة لأي جلسة قادمة**: معالجة التعارض التلقائية (conflict resolution) وتأجيل التحميل لحدث `DOMContentLoaded` (المذكورين بالقسم 3) لم يُتحقق رسميًا أنهما مطبّقين داخل `45-server-only.js` بنفس الصيغة — الملف يستخدم حدث `load` (لا `DOMContentLoaded`) ويحتوي منطق تعارض عبر `result.conflict`/`CONFLICT` مبني مسبقًا. يُنصح بمراجعة هذا التطابق عند أي مشكلة مزامنة تظهر مستقبلًا بدل افتراض التطابق الكامل مع القسم 3.
 
 ---
 
