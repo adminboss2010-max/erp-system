@@ -90,7 +90,12 @@
       };
 
   window.nayefSaveData = function () {
-    debouncedSave(stateSnapshot());
+    const snapshot = stateSnapshot();
+    debouncedSave(snapshot);
+    // 🆕 مزامنة الشيتات المقروءة (المناديب، العملاء، الأصناف، المعاملات) بعد الحفظ الأساسي
+    if (window.StorageV2 && typeof window.StorageV2.syncStructuredSheets === 'function') {
+      window.StorageV2.syncStructuredSheets(snapshot);
+    }
   };
 
   // Remove every user-facing import path, including files dropped onto the page.
