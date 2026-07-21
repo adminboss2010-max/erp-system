@@ -1823,7 +1823,11 @@ function pageStatement(pg, S, T) {
           <label>👤 اسم المندوب</label>
           <select id="statementAgent" onchange="onAgentChange()">
             <option value="">— الكل (كل المناديب) —</option>
-            ${(typeof getActiveAgentsForPeriod === "function" ? getActiveAgentsForPeriod() : [...new Set(clients.map(c => c.ag).filter(Boolean))]).map(ag => `<option value="${ag}">${ag}</option>`).join('')}
+            ${(() => {
+              const registeredAgents = (typeof O !== 'undefined' && O.ag ? O.ag : []).map(a => a.nm).filter(Boolean);
+              const activeAgents = typeof getActiveAgentsForPeriod === "function" ? getActiveAgentsForPeriod() : [...new Set(clients.map(c => c.ag).filter(Boolean))];
+              return Array.from(new Set([...registeredAgents, ...activeAgents])).sort();
+            })().map(ag => `<option value="${ag}">${ag}</option>`).join('')}
           </select>
           <small style="color:#999;font-size:11px;display:block;margin-top:4px">يتم اختيار المندوب تلقائياً عند اختيار العميل</small>
         </div>
