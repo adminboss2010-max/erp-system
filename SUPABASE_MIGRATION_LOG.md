@@ -4,6 +4,8 @@
 
 **القرار الأساسي المتبع**: هجرة موازية، مش استبدال فوري. النظام الحالي (Google Apps Script) لسه شغال زي ما هو ومنلمسوش. النظام الجديد (Supabase) بيتبني جنبه، ومنقرر الانتقال الفعلي بس بعد اختبار كامل.
 
+**⚠️ تصحيح مهم لطبيعة المشروع (اتضح أثناء المرحلة 2)**: النظام مش لجمعية المسايل فقط للاستخدام الداخلي — الهدف الفعلي هو **منتج SaaS** يُباع لشركات تانية. ده كان قرار غائب وقت كتابة `AI_CONTEXT.md` الأصلي، وأثّر بشكل مباشر على تصميم الـ Auth (تسجيل ذاتي مفتوح، مش حسابات تُنشأ يدويًا بس). أي قراءة لهذا الملف يجب أن تأخذ في الاعتبار أن النظام SaaS متعدد المستأجرين للبيع، مش أداة داخلية فقط.
+
 ---
 
 ## الحالة الحالية: المرحلة 1 — مكتملة ✅
@@ -61,14 +63,109 @@
 
 ---
 
-## الخطوة الجاية (لم تبدأ بعد): المرحلة 2 — المصادقة (Auth)
+## المرحلة 2 — المصادقة (Auth) — مكتملة ✅
 
-القرار المطروح في خطة الهجرة (لم يُحسم بعد وقت كتابة هذا الملف): استخدام Supabase Auth مباشرة (موصى به) بدل محاكاة نفس منطق الجلسات القديم من `Code.gs`.
+### القرار النهائي: نموذج onboarding
 
-**قبل البدء في المرحلة 2، يجب التأكد من**:
+- **تسجيل ذاتي مفتوح** (self-service signup) — أي حد يقدر يعمل حساب لنفسه من الموقع مباشرة
+- **فترة تجربة مجانية 14 يوم** لكل شركة جديدة، بعدها **قفل جزئي (Read-only)** تلقائي لحد ما تشترك (نظام الدفع نفسه لسه مش محدد، هيتقرر لاحقًا وهيتكامل فوق نفس الآلية من غير تعديل جوهري)
+- **أول مستخدم يسجل = owner تلقائي** لشركته الجديدة (مفيش مرحلة وسيطة أو موافقة يدوية)
+
+### إعدادات Supabase Auth المفعّلة
+
+- **Allow new users to sign up**: ON (التسجيل الذاتي مفتوح)
+- **Confirm email**: ON (لازم تأكيد إيميل — أمان ضروري لنظام عام)
+- **Email provider**: Enabled
+
+### آلية "شركة تلقائية لكل مستخدم جديد" (Database Trigger)
+
+عمود جديد أُضيف لجدول `companies`:
+```sql
+alter table companies add column trial_ends_at timestamptz;
+```
+
+دالة + Trigger على `auth.users` (ينفّذ تلقائيًا عند أي `insert` جديد في المستخدمين):
+```sql
+create or replace function public.handle_new_user()
+returns trigger as $$
+declare
+  new_company_id uuid;
+begin
+  insert into public.companies (name_ar, name_en, status, plan, trial_ends_at)
+  values (
+    coalesce(new.raw_user_meta_data->>'company_name_ar', 'شركة جديدة'),
+    new.raw_user_meta_data->>'company_name_en',
+    'active',
+    'trial',
+    now() + interval '14 days'
+  )
+  returning id into new_company_id;
+
+  insert into public.company_users (user_id, company_id, role)
+  values (new.id, new_company_id, 'owner');
+
+  return new;
+end;
+$$ language plpgsql security definer
+set search_path = public, auth;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+```
+
+**⚠️ درس تقني مهم (لأي تعديل مستقبلي على دوال مشابهة)**: أي دالة بـ `security definer` بتتنفذ ضمن Trigger على `auth.users` **لازم** تستخدم أسماء جداول مؤهّلة بالكامل (`public.companies` مش `companies` بس) + `set search_path = public, auth` صريح في تعريف الدالة. من غيرها بتفشل بخطأ `relation "X" does not exist` رغم إن الجدول موجود فعليًا — لأن مسار البحث الافتراضي لسياق `auth` مابيشملش `public` تلقائيًا. تم اكتشاف المشكلة دي فعليًا وتم حلها (راجع تفاصيل التشخيص في تاريخ الشات لو محتاج).
+
+**ملاحظة**: اسم الشركة (`company_name_ar`) بيجي من "user metadata" وقت التسجيل من نموذج التسجيل في الواجهة الأمامية (لسه مش مبني). لو مفيش اسم مبعوت، بيتحط اسم افتراضي "شركة جديدة".
+
+### آلية القفل الجزئي بعد انتهاء التجربة (Read-only enforcement)
+
+دالة مساعدة:
+```sql
+create or replace function public.company_can_write(check_company_id uuid)
+returns boolean as $$
+  select exists (
+    select 1 from public.companies
+    where id = check_company_id
+    and (
+      plan <> 'trial'
+      or trial_ends_at is null
+      or trial_ends_at > now()
+    )
+  );
+$$ language sql security definer stable;
+```
+
+السياسات على `customers`, `agents`, `items`, `transactions`, `company_settings` أُعيد بناؤها لفصل القراءة عن الكتابة: `select` مفتوح دايمًا لأي عضو، بينما `insert`/`update`/`delete` بتتطلب `company_can_write` كمان. النمط المستخدم لكل جدول (مثال `customers`):
+```sql
+create policy "customers_select" on customers for select using (is_company_member(company_id));
+create policy "customers_insert" on customers for insert with check (is_company_member(company_id) and company_can_write(company_id));
+create policy "customers_update" on customers for update using (is_company_member(company_id)) with check (is_company_member(company_id) and company_can_write(company_id));
+create policy "customers_delete" on customers for delete using (is_company_member(company_id) and company_can_write(company_id));
+```
+نفس النمط تكرر لـ `agents`, `items`, `transactions`, `company_settings` (بدون `delete` لـ `company_settings`).
+
+**قرار متعمد**: جدول `audit_log` **لم يُعدَّل** — سيب سياسة العزل البسيطة القديمة بدون فصل قراءة/كتابة، لأنه سجل تدقيق نظامي مش عملية مستخدم مباشرة، ومنطقيًا ميتقفلش حتى لو الشركة `read-only`.
+
+**قرار مؤجل عمدًا**: نظام الدفع الفعلي (بوابة دفع، فواتير) لسه مش محدد ولا مبني. الآلية الحالية مصممة عشان أي تكامل دفع مستقبلي يحتاج بس يحدّث عمود `plan` في `companies` من غير أي تعديل تاني في منطق القفل نفسه.
+
+### الاختبار الفعلي (End-to-End)، تم وأثبت نجاح الآلية بالكامل
+
+1. **اختبار التسجيل الذاتي**: مستخدم تجريبي (`test@gmail.com`) اتعمل من Authentication → Add user → اتفعّل الـ Trigger أوتوماتيك → شركة "شركة جديدة" اتعملت (`trial`, `trial_ends_at` = +14 يوم) → المستخدم اترتبط كـ `owner`. تم التحقق مباشرة من الجدول. ✅
+2. **اختبار القفل بعد انتهاء التجربة**: اتعملت شركة وهمية بـ `trial_ends_at` في الماضي، وربط `test@gmail.com` بيها مؤقتًا، ومحاكاة جلسته:
+   - القراءة (`select` من `companies`) → نجحت ✅
+   - الكتابة (`insert` في `customers`) → اترفضت فعليًا برسالة `new row violates row-level security policy for table "customers"` ✅
+   - بعد الاختبار: تم حذف الربط والشركة الوهمية بالكامل (تنظيف بيانات الاختبار)
+
+---
+
+## الخطوة الجاية (لم تبدأ بعد): المرحلة 3 — API (استبدال Code.gs بـ Edge Functions)
+
+**قبل البدء في المرحلة 3، يجب التأكد من**:
 1. هل الملف ده (`SUPABASE_MIGRATION_LOG.md`) اتضاف فعليًا للريبو على GitHub؟
-2. هل فيه أي تعديل حصل على السكيمة من وقت كتابة هذا الملف؟ (تحقق مباشرة من Supabase Dashboard → Table Editor)
-3. اقرأ `خطة_الهجرة_Supabase.md` قسم "المرحلة 2" قبل أي تنفيذ.
+2. هل فيه أي تعديل حصل على السكيمة أو السياسات من وقت كتابة هذا الملف؟ (تحقق مباشرة من Supabase Dashboard)
+3. اقرأ `خطة_الهجرة_Supabase.md` قسم "المرحلة 3" قبل أي تنفيذ.
+4. نظام الدفع لسه غير محدد — لو اتقرر شكله قبل المرحلة 3، يفيد يُوثّق هنا أول.
 
 ---
 
