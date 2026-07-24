@@ -137,14 +137,25 @@ const ApiClient = {
 
       return { ok: true, token: data.session.access_token, company: company };
     },
-    register(name_ar, admin_email, password, logo) {
-      return ApiClient._call('register', { name_ar, admin_email, password, logo: logo || '' }, false);
+    async register(name_ar, admin_email, password) {
+      const supabase = ApiClient._supabase;
+      if (!supabase) return { ok: false, error: 'تعذّر تحميل مكتبة Supabase.' };
+
+      const { data, error } = await supabase.auth.signUp({
+        email: admin_email,
+        password: password,
+        options: { data: { company_name_ar: name_ar } }
+      });
+
+      if (error) return { ok: false, error: error.message };
+      return { ok: true, user: data.user, needsEmailConfirmation: !data.session };
     },
     // دالة تسجيل خروج حقيقية لإبلاغ السيرفر وتنظيف الكاش المحلي فوراً
     async logout() {
-      const res = await ApiClient._call('logout', {});
+      const supabase = ApiClient._supabase;
+      if (supabase) await supabase.auth.signOut();
       localStorage.removeItem('erp_token');
-      return res;
+      return { ok: true };
     }
   },
 
@@ -187,7 +198,7 @@ const ApiClient = {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + window.SUPABASE_ANON_KEY
+            'Authorization': 'Bearer ' + ApiClient._token()
           },
           body: JSON.stringify(payload)
         });
