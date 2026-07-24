@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>استيراد الأصناف</title>
+<link rel="stylesheet" href="design-system.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="27" y="52" width="10" height="24" rx="2.5" fill="#b8932f"/>
+        <rect x="41" y="42" width="10" height="34" rx="2.5" fill="#b8932f"/>
+        <rect x="55" y="30" width="10" height="46" rx="2.5" fill="#b8932f"/>
+        <rect x="69" y="18" width="10" height="58" rx="2.5" fill="#d9bc8c"/>
+      </svg>
+    </div>
+    <div class="brand-name">prova<small>UNIFIED ERP SYSTEM</small></div>
+  </div>
+</header>
+
+<div class="page-container">
+<h2 class="page-title">📥 استيراد الأصناف من ملف إكسل</h2>
+
+<div class="card">
+  <h3>الخطوة 1: حمّل القالب</h3>
+  <p style="font-size:13px;color:var(--ink-soft)">حمّل النموذج الجاهز، املأه ببيانات أصنافك، ثم ارفعه فى الخطوة التالية.</p>
+  <button class="btn-gold" onclick="ItemsImportExportClient.downloadTemplate()">⬇️ تحميل القالب</button>
+</div>
+
+<div class="card">
+  <h3>الخطوة 2: ارفع الملف المعبّأ</h3>
+  <input type="file" id="excelFile" accept=".xlsx,.xls">
+  <button onclick="handleImport()">📤 استيراد الأصناف</button>
+  <div id="importStatus" style="margin-top:12px"></div>
+</div>
+
+<div id="importReport"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="supabase-client.js"></script>
+<script>
+let currentCompanyId = null;
+
+async function init() {
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user) { alert('لازم تسجل دخول الأول من test-auth.html'); return; }
+  const companyInfo = await AuthClientV2.getCurrentCompany();
+  if (!companyInfo.ok) { alert('خطأ: ' + companyInfo.error); return; }
+  currentCompanyId = companyInfo.company_id;
+}
+
+async function handleImport() {
+  const fileInput = document.getElementById('excelFile');
+  const statusEl = document.getElementById('importStatus');
+  if (!fileInput.files.length) {
+    statusEl.innerHTML = '<span class="msg-error">اختر ملف أولًا</span>';
+    return;
+  }
+
+  statusEl.innerHTML = '⏳ جاري القراءة والاستيراد...';
+  try {
+    const items = await ItemsImportExportClient.parseFile(fileInput.files[0]);
+    if (items.length === 0) {
+      statusEl.innerHTML = '<span class="msg-error">لم يتم العثور على أصناف صالحة فى الملف</span>';
+      return;
+    }
+    const result = await ItemsImportExportClient.importItems(currentCompanyId, items);
+    statusEl.innerHTML = `<span class="msg-success">✅ تم استيراد ${result.success} صنف بنجاح${result.failed ? `، وفشل ${result.failed}` : ''}</span>`;
+
+    if (result.errors.length) {
+      document.getElementById('importReport').innerHTML = `
+        <div class="card">
+          <h3>تفاصيل الأخطاء</h3>
+          <ul>${result.errors.map(e => `<li class="msg-error">${e}</li>`).join('')}</ul>
+        </div>`;
+    }
+  } catch (e) {
+    statusEl.innerHTML = `<span class="msg-error">خطأ فى قراءة الملف: ${e.message}</span>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>

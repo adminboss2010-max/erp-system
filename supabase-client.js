@@ -247,3 +247,126 @@ const PurchasesClient = {
     return { ok: true, ...json };
   }
 };
+
+const ItemsImportExportClient = {
+  // تحميل قالب إكسل فاضي بكل أعمدة النظام + شيت شرح
+  downloadTemplate() {
+    const headers = [
+      'الكود *', 'الاسم *', 'التصنيف', 'الماركة', 'الوحدة',
+      'الباركود', 'سعر التكلفة', 'سعر البيع', 'الكمية الابتدائية',
+      'الحد الأدنى للمخزون', 'الحد الأقصى للمخزون', 'الوصف'
+    ];
+    const exampleRow = [
+      'ITM001', 'مثال: أرز بسمتي 5 كجم', 'مواد غذائية', 'الملكة', 'كرتونة',
+      '6281234567890', '1.500', '2.200', '100', '10', '500', 'وصف اختياري للصنف'
+    ];
+
+    const wsData = [headers, exampleRow];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = headers.map(() => ({ wch: 20 }));
+
+    const instructionsData = [
+      ['تعليمات استخدام قالب prova لاستيراد الأصناف'],
+      [''],
+      ['1. الحقول المعلّم عليها بـ * إلزامية (الكود والاسم)'],
+      ['2. لا تغيّر أسماء الأعمدة فى الصف الأول'],
+      ['3. احذف صف المثال قبل رفع الملف الحقيقي، أو استبدله ببياناتك'],
+      ['4. الأسعار والكميات أرقام فقط (بدون رموز عملة أو فواصل)'],
+      ['5. لو الصنف عنده تصنيف جديد غير موجود بالنظام، سيتم إنشاؤه تلقائيًا'],
+      ['6. الحد الأقصى للمخزون اختياري، اتركه فارغًا إذا لم يكن محددًا'],
+    ];
+    const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsData);
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, wsInstructions, 'تعليمات');
+    XLSX.utils.book_append_sheet(wb, ws, 'الأصناف');
+    XLSX.writeFile(wb, 'قالب_استيراد_الأصناف_prova.xlsx');
+  },
+
+  // قراءة ملف مرفوع وتحويله لمصفوفة كائنات جاهزة للاستيراد
+  async parseFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames.includes('الأصناف') ? 'الأصناف' : workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+          const items = rows
+            .filter(r => r['الكود *'] || r['الكود'])
+            .map(r => ({
+              code: String(r['الكود *'] || r['الكود'] || '').trim(),
+              name: String(r['الاسم *'] || r['الاسم'] || '').trim(),
+              categoryName: String(r['التصنيف'] || '').trim(),
+              brand: String(r['الماركة'] || '').trim(),
+              unit: String(r['الوحدة'] || 'قطعة').trim(),
+              barcode: String(r['الباركود'] || '').trim(),
+              unit_cost: parseFloat(r['سعر التكلفة']) || 0,
+              unit_price: parseFloat(r['سعر البيع']) || 0,
+              stock_qty: parseFloat(r['الكمية الابتدائية']) || 0,
+              min_stock_level: parseFloat(r['الحد الأدنى للمخزون']) || 0,
+              max_stock_level: r['الحد الأقصى للمخزون'] ? parseFloat(r['الحد الأقصى للمخزون']) : null,
+              description: String(r['الوصف'] || '').trim(),
+            }));
+          resolve(items);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  },
+
+  // استيراد فعلي لقاعدة البيانات — ينشئ التصنيفات الناقصة تلقائيًا، ويتجاهل صفوف بدون كود/اسم
+  async importItems(companyId, items) {
+    const results = { success: 0, failed: 0, errors: [] };
+    const categoryCache = {};
+
+    // تحميل التصنيفات الموجودة مسبقًا
+    const { data: existingCats } = await supabaseClient
+      .from('item_categories').select('id, name').eq('company_id', companyId);
+    (existingCats || []).forEach(c => categoryCache[c.name] = c.id);
+
+    for (const item of items) {
+      try {
+        if (!item.code || !item.name) {
+          results.failed++;
+          results.errors.push(`صف بدون كود أو اسم تم تجاهله`);
+          continue;
+        }
+
+        let categoryId = null;
+        if (item.categoryName) {
+          if (!categoryCache[item.categoryName]) {
+            const { data: newCat } = await supabaseClient
+              .from('item_categories')
+              .insert({ company_id: companyId, name: item.categoryName })
+              .select().single();
+            categoryCache[item.categoryName] = newCat.id;
+          }
+          categoryId = categoryCache[item.categoryName];
+        }
+
+        const { error } = await supabaseClient.from('items').insert({
+          company_id: companyId,
+          code: item.code, name: item.name, category_id: categoryId,
+          brand: item.brand || null, unit: item.unit, barcode: item.barcode || null,
+          unit_cost: item.unit_cost, unit_price: item.unit_price, stock_qty: item.stock_qty,
+          min_stock_level: item.min_stock_level, max_stock_level: item.max_stock_level,
+          description: item.description || null,
+        });
+
+        if (error) { results.failed++; results.errors.push(`${item.code}: ${error.message}`); }
+        else results.success++;
+      } catch (e) {
+        results.failed++;
+        results.errors.push(`${item.code || '؟'}: ${e.message}`);
+      }
+    }
+    return results;
+  }
+};
