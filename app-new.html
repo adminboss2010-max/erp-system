@@ -158,6 +158,8 @@
     <div class="sidebar-group-title">💼 العمليات</div>
     <a class="sidebar-link" data-view="newSale" onclick="switchView('newSale')"><span class="ic">🧾</span> فاتورة مبيعات</a>
     <a class="sidebar-link" data-view="newPurchase" onclick="switchView('newPurchase')"><span class="ic">📥</span> فاتورة مشتريات</a>
+    <a class="sidebar-link" data-view="newPurchaseReturn" onclick="switchView('newPurchaseReturn')"><span class="ic">↩️</span> مرتجع مشتريات</a>
+    <a class="sidebar-link" data-view="newReturn" onclick="switchView('newReturn')"><span class="ic">↩️</span> مرتجع مبيعات</a>
     <a class="sidebar-link" data-view="newPayment" onclick="switchView('newPayment')"><span class="ic">💵</span> تسجيل دفعة</a>
 
     <div class="sidebar-group-title">📈 التقارير</div>
@@ -286,7 +288,7 @@ async function switchView(viewName) {
   const renderers = {
     dashboard: renderDashboard, customers: renderCustomers, agents: renderAgents,
     items: renderItems, suppliers: renderSuppliers, newSale: renderNewSale,
-    newPurchase: renderNewPurchase, newPayment: renderNewPayment, customerStatement: renderCustomerStatement,
+    newPurchase: renderNewPurchase, newPurchaseReturn: renderNewPurchaseReturn, newReturn: renderNewReturn, newPayment: renderNewPayment, customerStatement: renderCustomerStatement,
   };
   try { await renderers[viewName](); }
   catch (e) { document.getElementById('mainContent').innerHTML = `<div class="empty-state msg-error">خطأ: ${e.message}</div>`; }
@@ -893,6 +895,182 @@ async function submitPaymentAction() {
   }
   showToast(`تم تسجيل السداد — سند رقم ${result.transaction?.doc_no}، الرصيد الجديد: ${result.transaction?.new_balance?.toFixed(3)}`);
   renderNewPayment();
+}
+
+async function renderNewReturn() {
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('↩️','مرتجع مبيعات', 'اربط المرتجع برقم فاتورة بيع سابقة')}
+      <div class="card" style="max-width:500px">
+        <label style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px">رقم فاتورة البيع الأصلية *</label>
+        <div style="display:flex;gap:8px">
+          <input id="ret_refDoc" placeholder="مثال: 6">
+          <button onclick="loadReturnableItems()">🔍 بحث</button>
+        </div>
+        <div id="returnItemsArea" style="margin-top:16px"></div>
+      </div>
+
+      <div class="card" style="margin-top:20px">
+        <h3>📜 سجل مرتجعات المبيعات</h3>
+        <table>
+          <thead><tr><th>رقم المرتجع</th><th>مرتجع لفاتورة</th><th>التاريخ</th><th>العميل</th><th>المبلغ</th></tr></thead>
+          <tbody id="returnsLog"><tr><td colspan="5">جاري التحميل...</td></tr></tbody>
+        </table>
+      </div>
+    </div>`;
+  loadReturnsLog();
+}
+
+async function loadReturnableItems() {
+  const refDoc = document.getElementById('ret_refDoc').value.trim();
+  const area = document.getElementById('returnItemsArea');
+  if (!refDoc) { area.innerHTML = '<span class="msg-error">اكتب رقم الفاتورة</span>'; return; }
+
+  const result = await ReturnsClient.getSaleInvoiceItems(currentCompanyId, refDoc);
+  if (!result.ok || result.lines.length === 0) {
+    area.innerHTML = '<span class="msg-error">لا توجد فاتورة بيع بهذا الرقم، أو لا تحتوي أصنافًا</span>';
+    return;
+  }
+
+  area.innerHTML = `
+    <label style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:6px">اختر الصنف المرتجع</label>
+    <select id="ret_item">
+      ${result.lines.map((l, idx) => `<option value="${idx}">${l.items?.name} (بيع أصلي: ${l.qty})</option>`).join('')}
+    </select>
+    <label style="display:block;font-size:12px;color:var(--ink-soft);margin:10px 0 4px">الكمية المرتجعة</label>
+    <input id="ret_qty" type="number" min="1">
+    <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-top:10px">
+      <input id="ret_credit" type="checkbox" style="width:auto"> كانت الفاتورة الأصلية بالآجل
+    </label><br><br>
+    <button class="btn-gold" onclick="submitReturnAction()">✅ تسجيل المرتجع</button>
+    <div id="retMsg" style="margin-top:8px"></div>`;
+
+  window._returnableLines = result.lines;
+}
+
+async function submitReturnAction() {
+  const refDoc = document.getElementById('ret_refDoc').value.trim();
+  const lineIdx = parseInt(document.getElementById('ret_item').value);
+  const qty = parseFloat(document.getElementById('ret_qty').value);
+  const isCredit = document.getElementById('ret_credit').checked;
+  const line = window._returnableLines[lineIdx];
+
+  if (!qty || qty <= 0) { document.getElementById('retMsg').innerHTML = '<span class="msg-error">اكتب كمية صحيحة</span>'; return; }
+
+  const result = await ReturnsClient.postReturn({
+    company_id: currentCompanyId,
+    ref_doc_no: refDoc,
+    items: [{ item_id: line.item_id, qty, unit_cost: line.unit_cost, unit_price: line.unit_price, tax_rate: line.tax_rate }],
+    is_credit: isCredit,
+  });
+
+  if (!result.ok) { document.getElementById('retMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  showToast(`تم تسجيل مرتجع المبيعات رقم ${result.transaction?.doc_no}`);
+  renderNewReturn();
+}
+
+async function loadReturnsLog() {
+  const result = await ReturnsClient.listRecent(currentCompanyId);
+  const tbody = document.getElementById('returnsLog');
+  if (!result.ok || result.returns.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">لا توجد مرتجعات بعد</td></tr>';
+    return;
+  }
+  tbody.innerHTML = result.returns.map(r => `
+    <tr>
+      <td>${r.doc_no}</td><td>${r.ref_doc_no}</td>
+      <td>${new Date(r.date).toLocaleDateString('ar-KW')}</td>
+      <td>${r.customers?.name || '—'}</td>
+      <td>${(r.debit||r.credit||0).toFixed(3)} د.ك</td>
+    </tr>`).join('');
+}
+
+async function renderNewPurchaseReturn() {
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('↩️','مرتجع مشتريات', 'اربط المرتجع برقم فاتورة شراء سابقة')}
+      <div class="card" style="max-width:500px">
+        <label style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px">رقم فاتورة الشراء الأصلية *</label>
+        <div style="display:flex;gap:8px">
+          <input id="pret_refDoc" placeholder="مثال: 9">
+          <button onclick="loadPurchaseReturnableItems()">🔍 بحث</button>
+        </div>
+        <div id="purchaseReturnItemsArea" style="margin-top:16px"></div>
+      </div>
+
+      <div class="card" style="margin-top:20px">
+        <h3>📜 سجل مرتجعات المشتريات</h3>
+        <table>
+          <thead><tr><th>رقم المرتجع</th><th>مرتجع لفاتورة</th><th>التاريخ</th><th>المورد</th><th>المبلغ</th></tr></thead>
+          <tbody id="purchaseReturnsLog"><tr><td colspan="5">جاري التحميل...</td></tr></tbody>
+        </table>
+      </div>
+    </div>`;
+  loadPurchaseReturnsLog();
+}
+
+async function loadPurchaseReturnableItems() {
+  const refDoc = document.getElementById('pret_refDoc').value.trim();
+  const area = document.getElementById('purchaseReturnItemsArea');
+  if (!refDoc) { area.innerHTML = '<span class="msg-error">اكتب رقم الفاتورة</span>'; return; }
+
+  const result = await PurchaseReturnsClient.getPurchaseInvoiceItems(currentCompanyId, refDoc);
+  if (!result.ok || result.lines.length === 0) {
+    area.innerHTML = '<span class="msg-error">لا توجد فاتورة شراء بهذا الرقم، أو لا تحتوي أصنافًا</span>';
+    return;
+  }
+
+  area.innerHTML = `
+    <label style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:6px">اختر الصنف المرتجع</label>
+    <select id="pret_item">
+      ${result.lines.map((l, idx) => `<option value="${idx}">${l.items?.name} (شراء أصلي: ${l.qty})</option>`).join('')}
+    </select>
+    <label style="display:block;font-size:12px;color:var(--ink-soft);margin:10px 0 4px">الكمية المرتجعة</label>
+    <input id="pret_qty" type="number" min="1">
+    <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-top:10px">
+      <input id="pret_credit" type="checkbox" style="width:auto"> كانت الفاتورة الأصلية بالآجل
+    </label><br><br>
+    <button class="btn-gold" onclick="submitPurchaseReturnAction()">✅ تسجيل المرتجع</button>
+    <div id="pretMsg" style="margin-top:8px"></div>`;
+
+  window._purchaseReturnableLines = result.lines;
+}
+
+async function submitPurchaseReturnAction() {
+  const refDoc = document.getElementById('pret_refDoc').value.trim();
+  const lineIdx = parseInt(document.getElementById('pret_item').value);
+  const qty = parseFloat(document.getElementById('pret_qty').value);
+  const isCredit = document.getElementById('pret_credit').checked;
+  const line = window._purchaseReturnableLines[lineIdx];
+
+  if (!qty || qty <= 0) { document.getElementById('pretMsg').innerHTML = '<span class="msg-error">اكتب كمية صحيحة</span>'; return; }
+
+  const result = await PurchaseReturnsClient.postPurchaseReturn({
+    company_id: currentCompanyId,
+    ref_doc_no: refDoc,
+    items: [{ item_id: line.item_id, qty, unit_cost: line.unit_cost, tax_rate: line.tax_rate }],
+    is_credit: isCredit,
+  });
+
+  if (!result.ok) { document.getElementById('pretMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  showToast(`تم تسجيل مرتجع المشتريات رقم ${result.transaction?.doc_no}`);
+  renderNewPurchaseReturn();
+}
+
+async function loadPurchaseReturnsLog() {
+  const result = await PurchaseReturnsClient.listRecent(currentCompanyId);
+  const tbody = document.getElementById('purchaseReturnsLog');
+  if (!result.ok || result.returns.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">لا توجد مرتجعات بعد</td></tr>';
+    return;
+  }
+  tbody.innerHTML = result.returns.map(r => `
+    <tr>
+      <td>${r.doc_no}</td><td>${r.ref_doc_no}</td>
+      <td>${new Date(r.date).toLocaleDateString('ar-KW')}</td>
+      <td>${r.suppliers?.name || '—'}</td>
+      <td>${(r.debit||r.credit||0).toFixed(3)} د.ك</td>
+    </tr>`).join('');
 }
 
 init();

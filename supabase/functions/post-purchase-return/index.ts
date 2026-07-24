@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { company_id, customer_id, agent_id, items, is_credit, ref_doc_no } = body;
+    const { company_id, supplier_id, items, is_credit, ref_doc_no } = body;
 
     if (!company_id || !Array.isArray(items) || items.length === 0 || !ref_doc_no) {
       return new Response(
@@ -48,10 +48,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: result, error: rpcError } = await supabaseAdmin.rpc("post_return_transaction", {
+    const { data: result, error: rpcError } = await supabaseAdmin.rpc("post_purchase_return_transaction", {
       p_company_id: company_id,
-      p_customer_id: customer_id ?? null,
-      p_agent_id: agent_id ?? null,
+      p_supplier_id: supplier_id ?? null,
       p_items: items,
       p_is_credit: is_credit ?? false,
       p_ref_doc_no: ref_doc_no,

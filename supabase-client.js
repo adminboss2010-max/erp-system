@@ -433,3 +433,77 @@ const PaymentsClient = {
     return { ok: true, vouchers: data };
   }
 };
+const ReturnsClient = {
+  async postReturn(payload) {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const res = await fetch('https://ucgujtkehiihlygykegx.supabase.co/functions/v1/post-return', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if (!res.ok) return { ok: false, error: json.error || 'فشل تسجيل المرتجع' };
+    return { ok: true, ...json };
+  },
+
+  // 🆕 يجيب فواتير البيع اللي ممكن يترجعلها، مع الأصناف المتاحة للإرجاع (لسه ماترجعتش بالكامل)
+  async getSaleInvoiceItems(companyId, docNo) {
+  const { data, error } = await supabaseClient
+    .from('transactions')
+    .select('item_id, qty, unit_cost, debit, credit, tax_rate, items(name)')
+    .eq('company_id', companyId).eq('doc_no', docNo).eq('type', 'sale');
+  if (error) return { ok: false, error: error.message };
+
+  // 🆕 نحسب سعر الوحدة من الإجمالي (debit أو credit) ÷ الكمية، لأن الجدول مايخزنش unit_price مباشرة
+  const lines = (data || []).map(line => {
+    const total = (line.debit || 0) + (line.credit || 0);
+    const unit_price = line.qty > 0 ? total / line.qty : 0;
+    return { ...line, unit_price };
+  });
+
+  return { ok: true, lines };
+},
+
+  async listRecent(companyId, limit = 10) {
+    const { data, error } = await supabaseClient
+      .from('transactions')
+      .select('*, customers(name), items(name)')
+      .eq('company_id', companyId).eq('type', 'return')
+      .order('date', { ascending: false }).limit(limit);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, returns: data };
+  }
+};
+
+const PurchaseReturnsClient = {
+  async postPurchaseReturn(payload) {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const res = await fetch('https://ucgujtkehiihlygykegx.supabase.co/functions/v1/post-purchase-return', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if (!res.ok) return { ok: false, error: json.error || 'فشل تسجيل مرتجع المشتريات' };
+    return { ok: true, ...json };
+  },
+
+  async getPurchaseInvoiceItems(companyId, docNo) {
+    const { data, error } = await supabaseClient
+      .from('transactions')
+      .select('item_id, qty, unit_cost, debit, credit, tax_rate, items(name)')
+      .eq('company_id', companyId).eq('doc_no', docNo).eq('type', 'purchase');
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, lines: data };
+  },
+
+  async listRecent(companyId, limit = 10) {
+    const { data, error } = await supabaseClient
+      .from('transactions')
+      .select('*, suppliers(name), items(name)')
+      .eq('company_id', companyId).eq('type', 'purchase_return')
+      .order('date', { ascending: false }).limit(limit);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, returns: data };
+  }
+};
