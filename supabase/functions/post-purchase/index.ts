@@ -1,8 +1,4 @@
 // supabase/functions/post-purchase/index.ts
-//
-// تسجيل فاتورة شراء كاملة بشكل ذري — عكس منطق post-sale:
-// يزيد المخزون (مش يقلله)، ويزيد رصيد المورد (لو آجل)، بدون فحص كفاية مخزون
-// (الشراء مسموح دايمًا)، مع دعم الضريبة لكل صنف.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -13,7 +9,6 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
-  // الرد على طلب OPTIONS التمهيدي (Preflight) اللي المتصفح بيبعته تلقائيًا
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -32,7 +27,7 @@ Deno.serve(async (req) => {
     if (!company_id || !Array.isArray(items) || items.length === 0) {
       return new Response(
         JSON.stringify({ error: "بيانات ناقصة أو غير صحيحة (company_id, items[] مطلوبة)" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -50,7 +45,7 @@ Deno.serve(async (req) => {
     if (companyError || !company) {
       return new Response(JSON.stringify({ error: "الشركة غير موجودة" }), {
         status: 404,
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -62,7 +57,7 @@ Deno.serve(async (req) => {
     if (!canWrite) {
       return new Response(
         JSON.stringify({ error: "انتهت فترة التجربة المجانية. يرجى الاشتراك لمتابعة العمليات." }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -81,19 +76,19 @@ Deno.serve(async (req) => {
       console.error("post_purchase_transaction error:", rpcError);
       return new Response(
         JSON.stringify({ error: "فشل تنفيذ المعاملة", details: rpcError.message }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     return new Response(JSON.stringify({ success: true, transaction: result }), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("Unexpected error:", err);
     return new Response(JSON.stringify({ error: "خطأ غير متوقع في السيرفر" }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
