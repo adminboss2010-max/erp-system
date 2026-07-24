@@ -401,3 +401,35 @@ const UomClient = {
     return { ok: true, units: units || [] };
   }
 };
+const PaymentsClient = {
+  async postPayment(payload) {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const res = await fetch('https://ucgujtkehiihlygykegx.supabase.co/functions/v1/post-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if (!res.ok) return { ok: false, error: json.error || 'فشل تسجيل الدفعة' };
+    return { ok: true, ...json };
+  },
+
+  async getNextDocNumber(companyId) {
+    const { data, error } = await supabaseClient
+      .from('companies').select('last_doc_number').eq('id', companyId).single();
+    if (error) return null;
+    return (data.last_doc_number || 0) + 1;
+  },
+
+  async listRecent(companyId, limit = 10) {
+    const { data, error } = await supabaseClient
+      .from('transactions')
+      .select('*, customers(name)')
+      .eq('company_id', companyId)
+      .eq('type', 'payment')
+      .order('date', { ascending: false })
+      .limit(limit);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, vouchers: data };
+  }
+};

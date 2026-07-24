@@ -156,8 +156,9 @@
     <a class="sidebar-link" data-view="suppliers" onclick="switchView('suppliers')"><span class="ic">🚚</span> الموردين</a>
 
     <div class="sidebar-group-title">💼 العمليات</div>
-    <a class="sidebar-link" data-view="newSale" onclick="switchView('newSale')"><span class="ic">🧾</span> تسجيل بيع</a>
-    <a class="sidebar-link" data-view="newPurchase" onclick="switchView('newPurchase')"><span class="ic">📥</span> تسجيل شراء</a>
+    <a class="sidebar-link" data-view="newSale" onclick="switchView('newSale')"><span class="ic">🧾</span> فاتورة مبيعات</a>
+    <a class="sidebar-link" data-view="newPurchase" onclick="switchView('newPurchase')"><span class="ic">📥</span> فاتورة مشتريات</a>
+    <a class="sidebar-link" data-view="newPayment" onclick="switchView('newPayment')"><span class="ic">💵</span> تسجيل دفعة</a>
 
     <div class="sidebar-group-title">📈 التقارير</div>
     <a class="sidebar-link" data-view="customerStatement" onclick="switchView('customerStatement')"><span class="ic">📋</span> كشف حساب عميل</a>
@@ -285,7 +286,7 @@ async function switchView(viewName) {
   const renderers = {
     dashboard: renderDashboard, customers: renderCustomers, agents: renderAgents,
     items: renderItems, suppliers: renderSuppliers, newSale: renderNewSale,
-    newPurchase: renderNewPurchase, customerStatement: renderCustomerStatement,
+    newPurchase: renderNewPurchase, newPayment: renderNewPayment, customerStatement: renderCustomerStatement,
   };
   try { await renderers[viewName](); }
   catch (e) { document.getElementById('mainContent').innerHTML = `<div class="empty-state msg-error">خطأ: ${e.message}</div>`; }
@@ -318,8 +319,8 @@ async function renderDashboard() {
       ${lowStock > 0 ? `<div class="card" style="border-right:4px solid #d97706"><strong>⚠️ تنبيه:</strong> ${lowStock} صنف مخزونه منخفض (أقل من 5 وحدات)</div>` : ''}
       <div class="card">
         <h3>إجراءات سريعة</h3>
-        <button class="btn-gold" onclick="switchView('newSale')">🧾 تسجيل بيع جديد</button>
-        <button class="btn-gold" onclick="switchView('newPurchase')">📥 تسجيل شراء جديد</button>
+        <button class="btn-gold" onclick="switchView('newSale')">🧾 فاتورة مبيعات جديدة</button>
+        <button class="btn-gold" onclick="switchView('newPurchase')">📥 فاتورة مشتريات جديدة</button>
         <button onclick="switchView('customerStatement')">📋 عرض كشف حساب</button>
       </div>
     </div>`;
@@ -531,20 +532,25 @@ async function submitAddSupplier() {
 }
 
 async function renderNewSale() {
-  const [c, a, i] = await Promise.all([
+  const [c, a, i, nextDoc] = await Promise.all([
     CustomersClient.list(currentCompanyId), AgentsClient.list(currentCompanyId), ItemsClient.list(currentCompanyId),
+    PaymentsClient.getNextDocNumber(currentCompanyId),
   ]);
   cache.customers = c.ok ? c.customers : [];
   cache.agents = a.ok ? a.agents : [];
   cache.items = i.ok ? i.items : [];
   saleLineItem = null;
+  const today = new Date().toISOString().split('T')[0];
 
   document.getElementById('mainContent').innerHTML = `
     <div class="view-fade">
-      ${viewHeader('🧾','تسجيل عملية بيع')}
+      ${viewHeader('🧾','فاتورة مبيعات', 'رقم الفاتورة المتوقع: ' + nextDoc)}
       <div class="invoice-layout">
         <div class="invoice-form card">
-          <label style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px">العميل</label>
+          <label style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px">تاريخ الفاتورة</label>
+          <input id="s_date" type="date" value="${today}">
+
+          <label style="display:block;font-size:12px;color:var(--ink-soft);margin:12px 0 4px">العميل</label>
           ${searchSelectHtml('saleCust', 'ابحث عن عميل...')}
           <label style="display:block;font-size:12px;color:var(--ink-soft);margin:12px 0 4px">المندوب (اختياري)</label>
           ${searchSelectHtml('saleAgent', 'ابحث عن مندوب...')}
@@ -557,9 +563,17 @@ async function renderNewSale() {
             <select id="s_unit" onchange="updateSalePreview()"></select>
           </div>
 
-          <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-top:12px">
-            <input id="s_credit" type="checkbox" style="width:auto"> بيع بالآجل (على الحساب)
-          </label><br><br>
+          <label style="display:block;font-size:12px;color:var(--ink-soft);margin:12px 0 4px">طريقة البيع</label>
+          <select id="s_paymethod" onchange="document.getElementById('s_credit').checked = this.value==='credit'; updateSalePreview()">
+            <option value="cash">نقدي فوري</option>
+            <option value="credit">آجل (على الحساب)</option>
+          </select>
+          <input type="hidden" id="s_credit">
+
+          <label style="display:block;font-size:12px;color:var(--ink-soft);margin:12px 0 4px">ملاحظات</label>
+          <input id="s_notes" placeholder="اختياري">
+
+          <br><br>
           <button class="btn-gold" onclick="submitSaleAction()">✅ تسجيل البيع</button>
           <div id="saleMsg" style="margin-top:8px"></div>
         </div>
@@ -567,6 +581,14 @@ async function renderNewSale() {
           <h4>🧾 معاينة الفاتورة</h4>
           <div id="salePreview"><div class="empty-state" style="padding:14px">اختر صنف وكمية</div></div>
         </div>
+      </div>
+
+      <div class="card" style="margin-top:20px">
+        <h3>📜 سجل فواتير المبيعات</h3>
+        <table>
+          <thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>العميل</th><th>الصنف</th><th>المبلغ</th></tr></thead>
+          <tbody id="salesLog"><tr><td colspan="5">جاري التحميل...</td></tr></tbody>
+        </table>
       </div>
     </div>`;
 
@@ -578,7 +600,30 @@ async function renderNewSale() {
     updateSalePreview();
   });
   document.getElementById('s_qty').addEventListener('input', updateSalePreview);
+  loadSalesLog();
 }
+
+async function loadSalesLog() {
+  const { data, error } = await supabaseClient
+    .from('transactions')
+    .select('*, customers(name), items(name)')
+    .eq('company_id', currentCompanyId).eq('type', 'sale')
+    .order('date', { ascending: false }).limit(10);
+  const tbody = document.getElementById('salesLog');
+  if (error || !data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">لا توجد فواتير بعد</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(t => `
+    <tr>
+      <td>${t.doc_no}</td>
+      <td>${new Date(t.date).toLocaleDateString('ar-KW')}</td>
+      <td>${t.customers?.name || '—'}</td>
+      <td>${t.items?.name || '—'}</td>
+      <td>${(t.debit||t.credit||0).toFixed(3)} د.ك</td>
+    </tr>`).join('');
+}
+
 function updateSalePreview() {
   const qty = parseFloat(document.getElementById('s_qty').value) || 0;
   const unitSelect = document.getElementById('s_unit');
@@ -586,14 +631,18 @@ function updateSalePreview() {
   const el = document.getElementById('salePreview');
   if (!saleLineItem || !qty) { el.innerHTML = '<div class="empty-state" style="padding:14px">اختر صنف وكمية</div>'; return; }
   const total = qty * (saleLineItem.unit_price || 0);
+  const method = document.getElementById('s_paymethod')?.value === 'credit' ? 'آجل' : 'نقدي';
   el.innerHTML = `
     <div class="invoice-line"><span>${saleLineItem.name}</span><span>${qty} ${unitName || ''} × ${(saleLineItem.unit_price||0).toFixed(3)}</span></div>
+    <div class="invoice-line"><span>طريقة البيع</span><span>${method}</span></div>
     <div class="invoice-total"><span>الإجمالي</span><span>${total.toFixed(3)} د.ك</span></div>`;
 }
+
 async function submitSaleAction() {
   const itemId = getSearchSelectValue('saleItem');
   const qty = parseFloat(document.getElementById('s_qty').value);
   const unitName = document.getElementById('s_unit').value || null;
+  const isCredit = document.getElementById('s_paymethod').value === 'credit';
   if (!itemId || !qty || qty <= 0) { document.getElementById('saleMsg').innerHTML = '<span class="msg-error">اختر صنف وكمية صحيحة</span>'; return; }
   const item = cache.items.find(i => i.id === itemId);
   const payload = {
@@ -601,11 +650,11 @@ async function submitSaleAction() {
     customer_id: getSearchSelectValue('saleCust') || null,
     agent_id: getSearchSelectValue('saleAgent') || null,
     items: [{ item_id: itemId, qty, unit_price: item?.unit_price||0, unit_cost: item?.unit_cost||0, uom_unit_name: unitName }],
-    is_credit: document.getElementById('s_credit').checked,
+    is_credit: isCredit,
   };
   const result = await SalesClient.postSale(payload);
   if (!result.ok) { document.getElementById('saleMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
-  showToast(`تم تسجيل البيع — فاتورة رقم ${result.transaction?.doc_no}`);
+  showToast(`تم إصدار فاتورة المبيعات رقم ${result.transaction?.doc_no}`);
   renderNewSale();
 }
 
@@ -617,7 +666,7 @@ async function renderNewPurchase() {
 
   document.getElementById('mainContent').innerHTML = `
     <div class="view-fade">
-      ${viewHeader('📥','تسجيل عملية شراء')}
+      ${viewHeader('📥','فاتورة مشتريات')}
       <div class="invoice-layout">
         <div class="invoice-form card">
           <label style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px">المورد</label>
@@ -684,7 +733,7 @@ async function submitPurchaseAction() {
   };
   const result = await PurchasesClient.postPurchase(payload);
   if (!result.ok) { document.getElementById('purMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
-  showToast(`تم تسجيل الشراء — فاتورة رقم ${result.transaction?.doc_no}`);
+  showToast(`تم إصدار فاتورة المشتريات رقم ${result.transaction?.doc_no}`);
   renderNewPurchase();
 }
 
@@ -748,6 +797,102 @@ async function loadStatementAction() {
       <thead><tr><th>التاريخ</th><th>البيان</th><th>الصنف</th><th>الكمية</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="7" class="empty-state">لا توجد حركات</td></tr>'}</tbody>
     </table>`;
+}
+
+async function renderNewPayment() {
+  const [c, nextDoc] = await Promise.all([
+    CustomersClient.list(currentCompanyId),
+    PaymentsClient.getNextDocNumber(currentCompanyId),
+  ]);
+  cache.customers = c.ok ? c.customers : [];
+  const today = new Date().toISOString().split('T')[0];
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('💵','سند قبض', 'رقم السند المتوقع: ' + nextDoc)}
+      <div class="invoice-layout">
+        <div class="invoice-form card">
+          <label style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px">العميل *</label>
+          ${searchSelectHtml('payCust', 'ابحث عن عميل...')}
+
+          <label style="display:block;font-size:12px;color:var(--ink-soft);margin:12px 0 4px">تاريخ السداد</label>
+          <input id="pay_date" type="date" value="${today}">
+
+          <label style="display:block;font-size:12px;color:var(--ink-soft);margin:12px 0 4px">المبلغ المُحصَّل *</label>
+          <input id="pay_amount" type="number" step="0.001" placeholder="0.000">
+
+          <label style="display:block;font-size:12px;color:var(--ink-soft);margin:12px 0 4px">طريقة السداد</label>
+          <select id="pay_method">
+            <option value="cash">نقدي</option>
+            <option value="bank">تحويل بنكي</option>
+            <option value="cheque">شيك</option>
+          </select>
+
+          <label style="display:block;font-size:12px;color:var(--ink-soft);margin:12px 0 4px">رقم مرجعي (شيك/تحويل)</label>
+          <input id="pay_reference" placeholder="اختياري">
+
+          <label style="display:block;font-size:12px;color:var(--ink-soft);margin:12px 0 4px">ملاحظات</label>
+          <input id="pay_notes" placeholder="اختياري">
+
+          <br><br>
+          <button class="btn-gold" onclick="submitPaymentAction()">✅ تسجيل السداد</button>
+          <div id="payMsg" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:20px">
+        <h3>📜 آخر سندات القبض</h3>
+        <table>
+          <thead><tr><th>رقم السند</th><th>التاريخ</th><th>العميل</th><th>المبلغ</th></tr></thead>
+          <tbody id="paymentsLog"><tr><td colspan="4">جاري التحميل...</td></tr></tbody>
+        </table>
+      </div>
+    </div>`;
+
+  initSearchSelect('payCust', cache.customers.map(c => ({ id: c.id, name: c.name, subtitle: 'الرصيد: ' + (c.balance||0).toFixed(3) })));
+  loadPaymentsLog();
+}
+
+async function loadPaymentsLog() {
+  const result = await PaymentsClient.listRecent(currentCompanyId);
+  const tbody = document.getElementById('paymentsLog');
+  if (!result.ok || result.vouchers.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">لا توجد سندات بعد</td></tr>';
+    return;
+  }
+  tbody.innerHTML = result.vouchers.map(v => `
+    <tr>
+      <td>${v.doc_no}</td>
+      <td>${new Date(v.date).toLocaleDateString('ar-KW')}</td>
+      <td>${v.customers?.name || '—'}</td>
+      <td>${(v.credit||0).toFixed(3)} د.ك</td>
+    </tr>`).join('');
+}
+
+async function submitPaymentAction() {
+  const customerId = getSearchSelectValue('payCust');
+  const amount = parseFloat(document.getElementById('pay_amount').value);
+  const paymentDate = document.getElementById('pay_date').value;
+  const method = document.getElementById('pay_method').value;
+  const reference = document.getElementById('pay_reference').value || null;
+  const notes = document.getElementById('pay_notes').value || null;
+
+  if (!customerId || !amount || amount <= 0) {
+    document.getElementById('payMsg').innerHTML = '<span class="msg-error">اختر عميل واكتب مبلغ صحيح</span>';
+    return;
+  }
+
+  const result = await PaymentsClient.postPayment({
+    company_id: currentCompanyId, customer_id: customerId, amount,
+    payment_method: method, payment_date: paymentDate ? new Date(paymentDate).toISOString() : undefined,
+    reference, notes,
+  });
+  if (!result.ok) {
+    document.getElementById('payMsg').innerHTML = `<span class="msg-error">${result.error}</span>`;
+    return;
+  }
+  showToast(`تم تسجيل السداد — سند رقم ${result.transaction?.doc_no}، الرصيد الجديد: ${result.transaction?.new_balance?.toFixed(3)}`);
+  renderNewPayment();
 }
 
 init();
