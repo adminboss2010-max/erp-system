@@ -507,3 +507,99 @@ const PurchaseReturnsClient = {
     return { ok: true, returns: data };
   }
 };
+const DocumentsClient = {
+  async getFullDocument(companyId, docType, docNo) {
+    const { data: company } = await supabaseClient
+      .from('companies').select('name_ar, name_en, tax_number, cr_number, currency, address, phone, email, logo_url').eq('id', companyId).single();
+
+    const { data: lines, error } = await supabaseClient
+      .from('transactions')
+      .select('*, items(name, unit), customers(name, phone, address, code), suppliers(name, phone, tax_number, code)')
+      .eq('company_id', companyId).eq('doc_no', docNo).eq('type', docType)
+      .order('created_at');
+
+    if (error || !lines || lines.length === 0) return { ok: false, error: 'لم يتم العثور على المستند' };
+
+    const typeLabels = {
+      sale: 'فاتورة مبيعات', purchase: 'فاتورة مشتريات', payment: 'سند قبض',
+      return: 'مرتجع مبيعات', purchase_return: 'مرتجع مشتريات',
+    };
+
+    const party = lines[0].customers || lines[0].suppliers || null;
+    const isReturn = docType === 'return' || docType === 'purchase_return';
+    const isCredit = (lines[0].debit > 0 && !isReturn) || (lines[0].credit > 0 && isReturn && docType !== 'payment');
+
+    let subtotal = 0, grandTax = 0;
+    const items = lines.filter(l => l.item_id).map(l => {
+      const lineTotal = (l.debit || 0) + (l.credit || 0);
+      const qty = l.qty || 0;
+      const lineNet = lineTotal - (l.tax_amount || 0);
+      const unitPrice = qty > 0 ? lineNet / qty : 0;
+      subtotal += lineNet;
+      grandTax += (l.tax_amount || 0);
+      return {
+        name: l.items?.name || '—', unit: l.items?.unit || 'قطعة', qty,
+        unitPrice, taxAmount: l.tax_amount || 0, lineTotal,
+      };
+    });
+
+    let grandTotal = subtotal;
+    if (docType === 'payment') grandTotal = lines[0].credit || 0;
+
+    return {
+      ok: true,
+      doc: {
+        type: docType, typeLabel: typeLabels[docType] || docType, docNo,
+        refDocNo: lines[0].ref_doc_no || null,
+        date: lines[0].date, company, party, items,
+        subtotal, grandTax, grandTotal: grandTotal + grandTax,
+        currency: company?.currency || 'KWD', isReturn, isCredit,
+        partyLabel: lines[0].customers ? 'العميل' : (lines[0].suppliers ? 'المورد' : ''),
+      }
+    };
+  }
+};
+    // سند القبض ماله بنود أصناف، بس مبلغ واحد
+    if (docType === 'payment') {
+      grandTotal = lines[0].credit || 0;
+    }
+
+    return {
+      ok: true,
+      doc: {
+        type: docType, typeLabel: typeLabels[docType] || docType, docNo,
+        refDocNo: lines[0].ref_doc_no || null,
+        date: lines[0].date, company, party, items,
+        grandTotal, grandTax, netTotal: grandTotal + grandTax,
+        currency: company?.currency || 'KWD', isReturn,
+      }
+    };
+  }
+};
+const DocumentsClient2 = {
+  async listAll(companyId, filters = {}) {
+    let query = supabaseClient
+      .from('transactions')
+      .select('doc_no, type, date, ref_doc_no, debit, credit, customers(name), suppliers(name)')
+      .eq('company_id', companyId);
+
+    if (filters.type) query = query.eq('type', filters.type);
+    if (filters.fromDate) query = query.gte('date', filters.fromDate);
+    if (filters.toDate) query = query.lte('date', filters.toDate + 'T23:59:59');
+
+    const { data, error } = await query.order('date', { ascending: false });
+    if (error) return { ok: false, error: error.message };
+
+    // تجميع الأصناف تحت نفس رقم المستند (فاتورة فيها أكتر من صنف = صف واحد فى السجل)
+    const grouped = {};
+    (data || []).forEach(t => {
+      const key = t.type + '_' + t.doc_no;
+      if (!grouped[key]) {
+        grouped[key] = { doc_no: t.doc_no, type: t.type, date: t.date, ref_doc_no: t.ref_doc_no,
+          party: t.customers?.name || t.suppliers?.name || '—', total: 0 };
+      }
+      grouped[key].total += (t.debit || 0) + (t.credit || 0);
+    });
+    return { ok: true, documents: Object.values(grouped) };
+  }
+};

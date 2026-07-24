@@ -118,6 +118,51 @@
   .empty-state{ text-align:center; padding:36px 20px; color:var(--ink-mute); font-size:13px }
   #loadingBar{ display:none; position:fixed; top:0; left:0; right:0; height:3px; background:var(--gold-2); z-index:999; animation:loadPulse 1s infinite }
   @keyframes loadPulse{ 0%{opacity:.4} 50%{opacity:1} 100%{opacity:.4} }
+
+  #printArea{ display:none }
+  @media print{
+    body > *:not(#printArea){ display:none !important }
+    #printArea{ display:block !important; position:static; padding:0; direction:rtl }
+    .no-print{ display:none !important }
+    @page{ margin:14mm }
+  }
+  .print-doc{ font-family:var(--font-ar); color:var(--ink); max-width:800px; margin:0 auto }
+  .print-top-bar{ height:6px; background:linear-gradient(90deg, var(--navy-1), var(--gold-2)); margin-bottom:20px }
+  .print-header{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px }
+  .print-brand{ display:flex; align-items:center; gap:12px }
+  .print-brand-mark{ width:48px; height:48px; background:linear-gradient(160deg, var(--navy-2), var(--navy-1)); border-radius:10px; display:grid; place-items:center }
+  .print-company-name{ font-family:var(--font-display); font-weight:800; font-size:20px; color:var(--navy-1) }
+  .print-company-details{ font-size:11px; color:var(--ink-soft); line-height:1.7; margin-top:4px }
+  .print-doc-box{ text-align:left; background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:14px 18px; min-width:220px }
+  .print-doc-title{ font-family:var(--font-display); font-weight:800; font-size:17px; color:var(--gold-2); margin-bottom:6px }
+  .print-doc-meta-row{ display:flex; justify-content:space-between; font-size:11.5px; padding:2px 0 }
+  .print-doc-meta-row .k{ color:var(--ink-mute) }
+  .print-doc-meta-row .v{ font-weight:700; color:var(--ink) }
+
+  .print-party-box{ background:var(--paper); border-right:4px solid var(--gold-2); border-radius:6px; padding:12px 16px; margin-bottom:20px }
+  .print-party-box .label{ font-size:10.5px; color:var(--ink-mute); text-transform:uppercase; letter-spacing:0.5px }
+  .print-party-box .name{ font-family:var(--font-display); font-weight:800; font-size:15px; color:var(--ink); margin:2px 0 }
+  .print-party-box .details{ font-size:11.5px; color:var(--ink-soft) }
+
+  .print-return-badge{ background:var(--danger); color:#fff; padding:3px 12px; border-radius:20px; font-size:10.5px; font-weight:700; display:inline-block; margin-bottom:8px }
+  .print-credit-badge{ background:#fef3c7; color:#92400e; padding:3px 12px; border-radius:20px; font-size:10.5px; font-weight:700; display:inline-block; margin-right:6px }
+  .print-cash-badge{ background:var(--success-soft); color:var(--success); padding:3px 12px; border-radius:20px; font-size:10.5px; font-weight:700; display:inline-block; margin-right:6px }
+
+  .print-items-table{ width:100%; border-collapse:collapse; margin-bottom:4px }
+  .print-items-table th{ background:var(--navy-1); color:var(--gold-4); font-size:11.5px; padding:10px 8px; text-align:right }
+  .print-items-table td{ padding:9px 8px; border-bottom:1px solid var(--line); font-size:12.5px }
+  .print-items-table tr:nth-child(even) td{ background:var(--paper) }
+
+  .print-totals-wrap{ display:flex; justify-content:flex-start; margin-top:14px }
+  .print-totals-box{ width:300px }
+  .print-totals-box .row{ display:flex; justify-content:space-between; padding:7px 0; font-size:13px; border-bottom:1px solid var(--line-soft) }
+  .print-totals-box .row.grand{ border-bottom:none; border-top:2px solid var(--navy-1); margin-top:4px; padding-top:10px; font-weight:800; font-size:18px; color:var(--navy-1) }
+  .print-totals-box .row .k{ color:var(--ink-soft) }
+
+  .print-notes-box{ margin-top:22px; font-size:11px; color:var(--ink-mute); border-top:1px dashed var(--line); padding-top:12px }
+  .print-footer{ margin-top:46px; display:flex; justify-content:space-between }
+  .print-sign-box{ text-align:center; width:180px }
+  .print-sign-line{ border-top:1px solid var(--ink); margin-top:36px; padding-top:6px; font-size:11px; color:var(--ink-soft) }
 </style>
 </head>
 <body>
@@ -125,6 +170,7 @@
 <div id="loadingBar"></div>
 <div id="toastContainer"></div>
 <div class="modal-overlay" id="modalOverlay"></div>
+<div id="printArea"></div>
 
 <header class="app-header">
   <div class="brand">
@@ -164,6 +210,7 @@
 
     <div class="sidebar-group-title">📈 التقارير</div>
     <a class="sidebar-link" data-view="customerStatement" onclick="switchView('customerStatement')"><span class="ic">📋</span> كشف حساب عميل</a>
+    <a class="sidebar-link" data-view="documentsLog" onclick="switchView('documentsLog')"><span class="ic">🗂️</span> سجل المستندات</a>
   </nav>
 
   <main class="main-content" id="mainContent">
@@ -288,7 +335,7 @@ async function switchView(viewName) {
   const renderers = {
     dashboard: renderDashboard, customers: renderCustomers, agents: renderAgents,
     items: renderItems, suppliers: renderSuppliers, newSale: renderNewSale,
-    newPurchase: renderNewPurchase, newPurchaseReturn: renderNewPurchaseReturn, newReturn: renderNewReturn, newPayment: renderNewPayment, customerStatement: renderCustomerStatement,
+    newPurchase: renderNewPurchase, newPurchaseReturn: renderNewPurchaseReturn, newReturn: renderNewReturn, newPayment: renderNewPayment, customerStatement: renderCustomerStatement, documentsLog: renderDocumentsLog,
   };
   try { await renderers[viewName](); }
   catch (e) { document.getElementById('mainContent').innerHTML = `<div class="empty-state msg-error">خطأ: ${e.message}</div>`; }
@@ -657,7 +704,7 @@ async function submitSaleAction() {
   const result = await SalesClient.postSale(payload);
   if (!result.ok) { document.getElementById('saleMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
   showToast(`تم إصدار فاتورة المبيعات رقم ${result.transaction?.doc_no}`);
-  renderNewSale();
+  document.getElementById('saleMsg').innerHTML = `<button onclick="printDocument('sale', '${result.transaction?.doc_no}')">🖨️ طباعة</button> <button onclick="renderNewSale()">➕ فاتورة جديدة</button>`;
 }
 
 async function renderNewPurchase() {
@@ -736,7 +783,7 @@ async function submitPurchaseAction() {
   const result = await PurchasesClient.postPurchase(payload);
   if (!result.ok) { document.getElementById('purMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
   showToast(`تم إصدار فاتورة المشتريات رقم ${result.transaction?.doc_no}`);
-  renderNewPurchase();
+  document.getElementById('purMsg').innerHTML = `<button onclick="printDocument('purchase', '${result.transaction?.doc_no}')">🖨️ طباعة</button> <button onclick="renderNewPurchase()">➕ فاتورة جديدة</button>`;
 }
 
 async function renderCustomerStatement() {
@@ -894,7 +941,7 @@ async function submitPaymentAction() {
     return;
   }
   showToast(`تم تسجيل السداد — سند رقم ${result.transaction?.doc_no}، الرصيد الجديد: ${result.transaction?.new_balance?.toFixed(3)}`);
-  renderNewPayment();
+  document.getElementById('payMsg').innerHTML = `<button onclick="printDocument('payment', '${result.transaction?.doc_no}')">🖨️ طباعة</button> <button onclick="renderNewPayment()">➕ سند جديد</button>`;
 }
 
 async function renderNewReturn() {
@@ -966,7 +1013,7 @@ async function submitReturnAction() {
 
   if (!result.ok) { document.getElementById('retMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
   showToast(`تم تسجيل مرتجع المبيعات رقم ${result.transaction?.doc_no}`);
-  renderNewReturn();
+  document.getElementById('retMsg').innerHTML = `<button onclick="printDocument('return', '${result.transaction?.doc_no}')">🖨️ طباعة</button> <button onclick="renderNewReturn()">➕ مرتجع جديد</button>`;
 }
 
 async function loadReturnsLog() {
@@ -1054,7 +1101,7 @@ async function submitPurchaseReturnAction() {
 
   if (!result.ok) { document.getElementById('pretMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
   showToast(`تم تسجيل مرتجع المشتريات رقم ${result.transaction?.doc_no}`);
-  renderNewPurchaseReturn();
+  document.getElementById('pretMsg').innerHTML = `<button onclick="printDocument('purchase_return', '${result.transaction?.doc_no}')">🖨️ طباعة</button> <button onclick="renderNewPurchaseReturn()">➕ مرتجع جديد</button>`;
 }
 
 async function loadPurchaseReturnsLog() {
@@ -1070,6 +1117,148 @@ async function loadPurchaseReturnsLog() {
       <td>${new Date(r.date).toLocaleDateString('ar-KW')}</td>
       <td>${r.suppliers?.name || '—'}</td>
       <td>${(r.debit||r.credit||0).toFixed(3)} د.ك</td>
+    </tr>`).join('');
+}
+
+async function printDocument(docType, docNo) {
+  const result = await DocumentsClient.getFullDocument(currentCompanyId, docType, docNo);
+  if (!result.ok) { showToast(result.error, 'error'); return; }
+  const doc = result.doc;
+
+  const itemsRows = doc.items.length > 0 ? doc.items.map(it => `
+    <tr>
+      <td>${it.name}</td>
+      <td>${it.qty} ${it.unit}</td>
+      <td>${it.unitPrice.toFixed(3)}</td>
+      <td>${it.taxAmount > 0 ? it.taxAmount.toFixed(3) : '—'}</td>
+      <td><strong>${it.lineTotal.toFixed(3)}</strong></td>
+    </tr>`).join('') : `
+    <tr><td colspan="4">قيمة السند المستلمة نقدًا/بنكيًا</td><td><strong>${doc.grandTotal.toFixed(3)}</strong></td></tr>`;
+
+  document.getElementById('printArea').innerHTML = `
+    <div class="print-doc">
+      <div class="print-top-bar"></div>
+      <div class="print-header">
+        <div class="print-brand">
+          <div class="print-brand-mark">
+            <svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <rect x="27" y="52" width="10" height="24" rx="2.5" fill="#b8932f"/>
+              <rect x="41" y="42" width="10" height="34" rx="2.5" fill="#b8932f"/>
+              <rect x="55" y="30" width="10" height="46" rx="2.5" fill="#b8932f"/>
+              <rect x="69" y="18" width="10" height="58" rx="2.5" fill="#d9bc8c"/>
+            </svg>
+          </div>
+          <div>
+            <div class="print-company-name">${doc.company?.name_ar || 'اسم الشركة'}</div>
+            <div class="print-company-details">
+              ${doc.company?.address ? `📍 ${doc.company.address}<br>` : ''}
+              ${doc.company?.phone ? `📞 ${doc.company.phone}` : ''} ${doc.company?.email ? ` &nbsp;|&nbsp; ✉️ ${doc.company.email}` : ''}<br>
+              ${doc.company?.tax_number ? `الرقم الضريبي: ${doc.company.tax_number} &nbsp; ` : ''}
+              ${doc.company?.cr_number ? `السجل التجاري: ${doc.company.cr_number}` : ''}
+            </div>
+          </div>
+        </div>
+        <div class="print-doc-box">
+          ${doc.isReturn ? '<div class="print-return-badge">مستند مرتجع</div>' : ''}
+          <div class="print-doc-title">${doc.typeLabel}</div>
+          <div class="print-doc-meta-row"><span class="k">رقم المستند</span><span class="v">${doc.docNo}</span></div>
+          <div class="print-doc-meta-row"><span class="k">التاريخ</span><span class="v">${new Date(doc.date).toLocaleDateString('ar-KW')}</span></div>
+          ${doc.refDocNo ? `<div class="print-doc-meta-row"><span class="k">مرجع لمستند</span><span class="v">${doc.refDocNo}</span></div>` : ''}
+        </div>
+      </div>
+
+      ${doc.party ? `
+      <div class="print-party-box">
+        <div class="label">بيانات ${doc.partyLabel}</div>
+        <div class="name">${doc.party.name}</div>
+        <div class="details">
+          ${doc.party.code ? `الكود: ${doc.party.code} &nbsp; ` : ''}
+          ${doc.party.phone ? `📞 ${doc.party.phone}` : ''}
+          ${doc.party.address ? ` &nbsp; 📍 ${doc.party.address}` : ''}
+          ${doc.party.tax_number ? ` &nbsp; الرقم الضريبي: ${doc.party.tax_number}` : ''}
+        </div>
+      </div>` : ''}
+
+      ${docType !== 'payment' ? `
+      <div>
+        ${doc.isCredit ? '<span class="print-credit-badge">آجل — على الحساب</span>' : '<span class="print-cash-badge">نقدي</span>'}
+      </div><br>` : ''}
+
+      <table class="print-items-table">
+        <thead><tr><th>البيان</th><th>الكمية</th><th>سعر الوحدة</th><th>الضريبة</th><th>الإجمالي</th></tr></thead>
+        <tbody>${itemsRows}</tbody>
+      </table>
+
+      <div class="print-totals-wrap">
+        <div class="print-totals-box">
+          <div class="row"><span class="k">الإجمالي قبل الضريبة</span><span>${doc.subtotal.toFixed(3)} ${doc.currency}</span></div>
+          ${doc.grandTax > 0 ? `<div class="row"><span class="k">إجمالي الضريبة</span><span>${doc.grandTax.toFixed(3)} ${doc.currency}</span></div>` : ''}
+          <div class="row grand"><span>الإجمالي المستحق</span><span>${doc.grandTotal.toFixed(3)} ${doc.currency}</span></div>
+        </div>
+      </div>
+
+      <div class="print-notes-box">
+        تم إصدار هذا المستند إلكترونيًا عبر نظام prova ERP بتاريخ ${new Date().toLocaleDateString('ar-KW')}.
+      </div>
+
+      <div class="print-footer">
+        <div class="print-sign-box"><div class="print-sign-line">توقيع المستلم</div></div>
+        <div class="print-sign-box"><div class="print-sign-line">توقيع المسؤول المعتمد</div></div>
+      </div>
+    </div>`;
+
+  window.print();
+}
+
+const docTypeLabels = { sale: 'فاتورة مبيعات', purchase: 'فاتورة مشتريات', payment: 'سند قبض', return: 'مرتجع مبيعات', purchase_return: 'مرتجع مشتريات' };
+
+async function renderDocumentsLog() {
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('🗂️','سجل المستندات', 'كل الفواتير والسندات والمرتجعات فى مكان واحد')}
+      <div class="card">
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <select id="dl_type" onchange="loadDocumentsLog()">
+            <option value="">كل الأنواع</option>
+            <option value="sale">فواتير مبيعات</option>
+            <option value="purchase">فواتير مشتريات</option>
+            <option value="payment">سندات قبض</option>
+            <option value="return">مرتجعات مبيعات</option>
+            <option value="purchase_return">مرتجعات مشتريات</option>
+          </select>
+          <input id="dl_from" type="date" onchange="loadDocumentsLog()">
+          <input id="dl_to" type="date" onchange="loadDocumentsLog()">
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>النوع</th><th>رقم المستند</th><th>التاريخ</th><th>الجهة</th><th>مرجع</th><th>المبلغ</th><th></th></tr></thead>
+        <tbody id="documentsLogBody"><tr><td colspan="7">جاري التحميل...</td></tr></tbody>
+      </table>
+    </div>`;
+  loadDocumentsLog();
+}
+
+async function loadDocumentsLog() {
+  const filters = {
+    type: document.getElementById('dl_type').value || null,
+    fromDate: document.getElementById('dl_from').value || null,
+    toDate: document.getElementById('dl_to').value || null,
+  };
+  const result = await DocumentsClient2.listAll(currentCompanyId, filters);
+  const tbody = document.getElementById('documentsLogBody');
+  if (!result.ok || result.documents.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">لا توجد مستندات مطابقة</td></tr>';
+    return;
+  }
+  tbody.innerHTML = result.documents.map(d => `
+    <tr>
+      <td>${docTypeLabels[d.type] || d.type}</td>
+      <td>${d.doc_no}</td>
+      <td>${new Date(d.date).toLocaleDateString('ar-KW')}</td>
+      <td>${d.party}</td>
+      <td>${d.ref_doc_no || '—'}</td>
+      <td>${d.total.toFixed(3)} د.ك</td>
+      <td><button onclick="printDocument('${d.type}', '${d.doc_no}')">🖨️ طباعة</button></td>
     </tr>`).join('');
 }
 
