@@ -249,21 +249,20 @@ const PurchasesClient = {
 };
 
 const ItemsImportExportClient = {
-  // تحميل قالب إكسل فاضي بكل أعمدة النظام + شيت شرح
   downloadTemplate() {
     const headers = [
-      'الكود *', 'الاسم *', 'التصنيف', 'الماركة', 'الوحدة',
-      'الباركود', 'سعر التكلفة', 'سعر البيع', 'الكمية الابتدائية',
-      'الحد الأدنى للمخزون', 'الحد الأقصى للمخزون', 'الوصف'
+      'الكود *', 'الاسم *', 'التصنيف', 'الماركة', 'الوحدة الأساسية',
+      'مجموعة الوحدات (اختياري)', 'الباركود', 'سعر التكلفة', 'سعر البيع',
+      'الكمية الابتدائية', 'الحد الأدنى للمخزون', 'الحد الأقصى للمخزون', 'الوصف'
     ];
     const exampleRow = [
-      'ITM001', 'مثال: أرز بسمتي 5 كجم', 'مواد غذائية', 'الملكة', 'كرتونة',
-      '6281234567890', '1.500', '2.200', '100', '10', '500', 'وصف اختياري للصنف'
+      'ITM001', 'مثال: أرز بسمتي 5 كجم', 'مواد غذائية', 'الملكة', 'قطعة',
+      'كرتون-شد-قطعة', '6281234567890', '1.500', '2.200', '100', '10', '500', 'وصف اختياري للصنف'
     ];
 
     const wsData = [headers, exampleRow];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = headers.map(() => ({ wch: 20 }));
+    ws['!cols'] = headers.map(() => ({ wch: 22 }));
 
     const instructionsData = [
       ['تعليمات استخدام قالب prova لاستيراد الأصناف'],
@@ -272,8 +271,9 @@ const ItemsImportExportClient = {
       ['2. لا تغيّر أسماء الأعمدة فى الصف الأول'],
       ['3. احذف صف المثال قبل رفع الملف الحقيقي، أو استبدله ببياناتك'],
       ['4. الأسعار والكميات أرقام فقط (بدون رموز عملة أو فواصل)'],
-      ['5. لو الصنف عنده تصنيف جديد غير موجود بالنظام، سيتم إنشاؤه تلقائيًا'],
-      ['6. الحد الأقصى للمخزون اختياري، اتركه فارغًا إذا لم يكن محددًا'],
+      ['5. "مجموعة الوحدات" اختيارية: اكتب اسم مجموعة موجودة بالفعل بالنظام (زي "كرتون-شد-قطعة") لو الصنف بيُباع بأكتر من وحدة'],
+      ['6. لو تركت "مجموعة الوحدات" فارغة، الصنف هيتسجل بوحدة واحدة بس (الوحدة الأساسية)'],
+      ['7. لو كتبت اسم مجموعة وحدات مش موجودة بالنظام، سيتم تجاهل هذا الحقل بدون خطأ (الصنف يتسجل بدون مجموعة)'],
     ];
     const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsData);
 
@@ -283,7 +283,6 @@ const ItemsImportExportClient = {
     XLSX.writeFile(wb, 'قالب_استيراد_الأصناف_prova.xlsx');
   },
 
-  // قراءة ملف مرفوع وتحويله لمصفوفة كائنات جاهزة للاستيراد
   async parseFile(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -302,7 +301,8 @@ const ItemsImportExportClient = {
               name: String(r['الاسم *'] || r['الاسم'] || '').trim(),
               categoryName: String(r['التصنيف'] || '').trim(),
               brand: String(r['الماركة'] || '').trim(),
-              unit: String(r['الوحدة'] || 'قطعة').trim(),
+              unit: String(r['الوحدة الأساسية'] || r['الوحدة'] || 'قطعة').trim(),
+              uomGroupName: String(r['مجموعة الوحدات (اختياري)'] || '').trim(),
               barcode: String(r['الباركود'] || '').trim(),
               unit_cost: parseFloat(r['سعر التكلفة']) || 0,
               unit_price: parseFloat(r['سعر البيع']) || 0,
@@ -321,15 +321,19 @@ const ItemsImportExportClient = {
     });
   },
 
-  // استيراد فعلي لقاعدة البيانات — ينشئ التصنيفات الناقصة تلقائيًا، ويتجاهل صفوف بدون كود/اسم
   async importItems(companyId, items) {
     const results = { success: 0, failed: 0, errors: [] };
     const categoryCache = {};
+    const uomGroupCache = {};
 
-    // تحميل التصنيفات الموجودة مسبقًا
     const { data: existingCats } = await supabaseClient
       .from('item_categories').select('id, name').eq('company_id', companyId);
     (existingCats || []).forEach(c => categoryCache[c.name] = c.id);
+
+    // 🆕 تحميل مجموعات الوحدات الموجودة مسبقًا (مقروءة بأسمائها فقط، ما بننشئش مجموعات جديدة من الإكسل)
+    const { data: existingUomGroups } = await supabaseClient
+      .from('uom_groups').select('id, name').eq('company_id', companyId);
+    (existingUomGroups || []).forEach(g => uomGroupCache[g.name] = g.id);
 
     for (const item of items) {
       try {
@@ -351,6 +355,14 @@ const ItemsImportExportClient = {
           categoryId = categoryCache[item.categoryName];
         }
 
+        // 🆕 ربط مجموعة الوحدات لو موجودة بالاسم، وتجاهل بصمت لو مش موجودة (زي ما اتفقنا)
+        let uomGroupId = null;
+        if (item.uomGroupName && uomGroupCache[item.uomGroupName]) {
+          uomGroupId = uomGroupCache[item.uomGroupName];
+        } else if (item.uomGroupName) {
+          results.errors.push(`${item.code}: مجموعة الوحدات "${item.uomGroupName}" غير موجودة، تم تجاهلها`);
+        }
+
         const { error } = await supabaseClient.from('items').insert({
           company_id: companyId,
           code: item.code, name: item.name, category_id: categoryId,
@@ -358,6 +370,7 @@ const ItemsImportExportClient = {
           unit_cost: item.unit_cost, unit_price: item.unit_price, stock_qty: item.stock_qty,
           min_stock_level: item.min_stock_level, max_stock_level: item.max_stock_level,
           description: item.description || null,
+          uom_group_id: uomGroupId,
         });
 
         if (error) { results.failed++; results.errors.push(`${item.code}: ${error.message}`); }
@@ -368,5 +381,23 @@ const ItemsImportExportClient = {
       }
     }
     return results;
+  }
+};
+const UomClient = {
+  async getUnitsForItem(itemId) {
+    const { data, error } = await supabaseClient
+      .from('items')
+      .select('uom_group_id')
+      .eq('id', itemId)
+      .single();
+    if (error || !data.uom_group_id) return { ok: true, units: [] };
+
+    const { data: units, error: unitsError } = await supabaseClient
+      .from('uom_group_units')
+      .select('*')
+      .eq('uom_group_id', data.uom_group_id)
+      .order('sort_order');
+    if (unitsError) return { ok: false, error: unitsError.message };
+    return { ok: true, units: units || [] };
   }
 };

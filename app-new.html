@@ -5,7 +5,6 @@
 <title>prova ERP</title>
 <link rel="stylesheet" href="design-system.css">
 <style>
-  /* ============ الهيكل العام ============ */
   .app-shell{ display:flex; min-height:calc(100vh - 60px) }
   .sidebar{ width:230px; background:var(--navy-0); padding:14px 0; flex-shrink:0 }
   .sidebar-group-title{
@@ -22,7 +21,6 @@
   .sidebar-link.active{ background:rgba(217,188,140,0.12); color:var(--gold-4); border-right-color:var(--gold-2) }
   .main-content{ flex:1; padding:26px 30px; overflow-x:auto }
 
-  /* ============ انتقال ناعم بين الشاشات ============ */
   .view-fade{ animation:fadeIn .25s ease }
   @keyframes fadeIn{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)} }
 
@@ -30,7 +28,6 @@
   .view-title{ font-family:var(--font-display); font-weight:800; font-size:22px; color:var(--ink) }
   .view-subtitle{ font-size:12.5px; color:var(--ink-soft); margin-top:2px }
 
-  /* ============ بطاقات KPI ============ */
   .kpi-row{ display:flex; gap:14px; margin-bottom:22px; flex-wrap:wrap }
   .kpi{
     flex:1; min-width:150px; background:var(--paper-2); border-radius:var(--radius);
@@ -40,12 +37,10 @@
   .kpi .label{ font-size:11.5px; color:var(--ink-soft) }
   .kpi .value{ font-family:var(--font-display); font-size:21px; font-weight:800; color:var(--navy-1); margin-top:3px }
 
-  /* ============ شريط أدوات الشاشة (بحث + زر إضافة) ============ */
   .toolbar{ display:flex; gap:10px; align-items:center; margin-bottom:16px }
   .toolbar .filter-input{ flex:1; max-width:320px }
   .toolbar .spacer{ flex:1 }
 
-  /* ============ بطاقات القائمة (بديل الجدول العادي) ============ */
   .list-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:12px }
   .entity-card{
     background:var(--paper-2); border-radius:var(--radius); padding:14px 16px;
@@ -63,7 +58,6 @@
   .entity-card .ec-badge.warn{ background:#fef3c7; color:#92400e }
   .entity-card .ec-badge.danger{ background:var(--danger-soft); color:var(--danger) }
 
-  /* ============ نافذة منزلقة (Modal) ============ */
   .modal-overlay{
     position:fixed; inset:0; background:rgba(10,19,38,0.45); display:none;
     align-items:flex-start; justify-content:flex-end; z-index:500;
@@ -87,7 +81,6 @@
   .modal-footer{ padding:16px 20px; border-top:1px solid var(--line) }
   .modal-footer button{ width:100% }
 
-  /* ============ تنبيهات Toast ============ */
   #toastContainer{ position:fixed; bottom:20px; left:20px; z-index:1000; display:flex; flex-direction:column; gap:8px }
   .toast{
     background:var(--navy-1); color:#fff; padding:12px 18px; border-radius:var(--radius-sm);
@@ -98,7 +91,6 @@
   .toast-success{ border-right:4px solid var(--success) }
   .toast-error{ border-right:4px solid var(--danger) }
 
-  /* ============ حقل البحث الحي (Searchable Select) ============ */
   .search-select{ position:relative }
   .search-select-input{ width:100%; cursor:text }
   .search-select-dropdown{
@@ -112,13 +104,16 @@
   .search-select-option .opt-sub{ color:var(--ink-mute); font-size:11px; margin-right:6px }
   .search-select-empty{ padding:12px; font-size:12.5px; color:var(--ink-mute); text-align:center }
 
-  /* ============ فاتورة معاينة حية (بيع/شراء) ============ */
   .invoice-layout{ display:flex; gap:20px; flex-wrap:wrap }
   .invoice-form{ flex:1; min-width:300px }
   .invoice-preview{ width:290px; background:var(--paper-2); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow-sm); height:fit-content }
   .invoice-preview h4{ font-family:var(--font-display); font-size:14px; margin:0 0 12px; color:var(--navy-1) }
   .invoice-line{ display:flex; justify-content:space-between; font-size:12.5px; padding:6px 0; border-bottom:1px solid var(--line-soft) }
   .invoice-total{ display:flex; justify-content:space-between; font-weight:800; font-size:16px; margin-top:12px; padding-top:10px; border-top:2px solid var(--navy-1); color:var(--navy-1) }
+
+  .unit-select-row{ display:flex; gap:8px; margin-top:6px }
+  .unit-select-row input{ flex:2 }
+  .unit-select-row select{ flex:1; display:none }
 
   .empty-state{ text-align:center; padding:36px 20px; color:var(--ink-mute); font-size:13px }
   #loadingBar{ display:none; position:fixed; top:0; left:0; right:0; height:3px; background:var(--gold-2); z-index:999; animation:loadPulse 1s infinite }
@@ -181,9 +176,6 @@ let cache = { customers: [], agents: [], items: [], suppliers: [] };
 let saleLineItem = null;
 let purchaseLineItem = null;
 
-/* ============================================================
-   أدوات عامة: Toast / Modal / بحث حي
-   ============================================================ */
 function showToast(message, type = 'success') {
   const el = document.createElement('div');
   el.className = 'toast toast-' + type;
@@ -208,7 +200,6 @@ function closeModal() { document.getElementById('modalOverlay').classList.remove
 
 function showLoading(on) { document.getElementById('loadingBar').style.display = on ? 'block' : 'none'; }
 
-// مكوّن بحث حي بسيط قابل لإعادة الاستخدام فى أي مكان (عملاء/مناديب/أصناف/موردين)
 function searchSelectHtml(id, placeholder) {
   return `
     <div class="search-select">
@@ -248,9 +239,28 @@ function initSearchSelect(id, items, onPick) {
 }
 function getSearchSelectValue(id) { return document.getElementById(id + '_value')?.value || ''; }
 
-/* ============================================================
-   التمهيد + تسجيل الخروج
-   ============================================================ */
+async function getUnitsForItem(itemId) {
+  const { data, error } = await supabaseClient.from('items').select('uom_group_id').eq('id', itemId).single();
+  if (error || !data.uom_group_id) return [];
+  const { data: units, error: unitsError } = await supabaseClient
+    .from('uom_group_units').select('*').eq('uom_group_id', data.uom_group_id).order('sort_order');
+  if (unitsError) return [];
+  return units || [];
+}
+
+async function populateUnitSelect(selectId, itemId) {
+  const select = document.getElementById(selectId);
+  const units = await getUnitsForItem(itemId);
+  if (units.length > 0) {
+    select.innerHTML = units.map(u =>
+      `<option value="${u.unit_name}" data-factor="${u.conversion_factor}">${u.unit_name}</option>`).join('');
+    select.style.display = 'inline-block';
+  } else {
+    select.innerHTML = '';
+    select.style.display = 'none';
+  }
+}
+
 async function init() {
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) {
@@ -268,9 +278,6 @@ async function init() {
 }
 async function doLogout() { await AuthClientV2.logout(); window.location.href = 'test-auth.html'; }
 
-/* ============================================================
-   الموجّه (Router)
-   ============================================================ */
 async function switchView(viewName) {
   document.querySelectorAll('.sidebar-link').forEach(a => a.classList.remove('active'));
   document.querySelector(`[data-view="${viewName}"]`)?.classList.add('active');
@@ -289,9 +296,6 @@ function viewHeader(icon, title, subtitle) {
   return `<div class="view-header"><div><div class="view-title">${icon} ${title}</div><div class="view-subtitle">${subtitle||''}</div></div></div>`;
 }
 
-/* ============================================================
-   1) نظرة عامة
-   ============================================================ */
 async function renderDashboard() {
   const [c, a, i] = await Promise.all([
     CustomersClient.list(currentCompanyId), AgentsClient.list(currentCompanyId), ItemsClient.list(currentCompanyId),
@@ -321,13 +325,9 @@ async function renderDashboard() {
     </div>`;
 }
 
-/* ============================================================
-   2) العملاء (بطاقات + بحث حي + Modal إضافة)
-   ============================================================ */
 async function renderCustomers() {
   const result = await CustomersClient.list(currentCompanyId);
   cache.customers = result.ok ? result.customers : [];
-
   document.getElementById('mainContent').innerHTML = `
     <div class="view-fade">
       ${viewHeader('👥','العملاء', cache.customers.length + ' عميل مسجّل')}
@@ -343,15 +343,13 @@ async function renderCustomers() {
 function renderCustomersGrid(filter) {
   const f = (filter||'').toLowerCase();
   const filtered = cache.customers.filter(c => !f || c.name.toLowerCase().includes(f) || (c.code||'').toLowerCase().includes(f));
-  const gridHtml = filtered.map(c => `
+  document.getElementById('custGrid').innerHTML = filtered.map(c => `
     <div class="entity-card">
       <div class="ec-top"><div class="ec-name">${c.name}</div><div class="ec-code">${c.code||'—'}</div></div>
       <div class="ec-line"><span>📞 ${c.phone||'—'}</span></div>
       <div class="ec-line"><span>📍 ${c.address||'—'}</span></div>
       <div class="ec-badge ${c.balance>0?'warn':''}">الرصيد: ${(c.balance||0).toFixed(3)} د.ك</div>
     </div>`).join('') || '<div class="empty-state">لا يوجد عملاء مطابقين</div>';
-  const gridEl = document.getElementById('custGrid');
-  if (gridEl) gridEl.innerHTML = gridHtml;
 }
 function openAddCustomerModal() {
   openModal('➕ إضافة عميل جديد', `
@@ -378,9 +376,6 @@ async function submitAddCustomer() {
   renderCustomers();
 }
 
-/* ============================================================
-   3) المناديب
-   ============================================================ */
 async function renderAgents() {
   const result = await AgentsClient.list(currentCompanyId);
   cache.agents = result.ok ? result.agents : [];
@@ -431,9 +426,6 @@ async function submitAddAgent() {
   renderAgents();
 }
 
-/* ============================================================
-   4) الأصناف
-   ============================================================ */
 async function renderItems() {
   const result = await ItemsClient.list(currentCompanyId);
   cache.items = result.ok ? result.items : [];
@@ -443,6 +435,7 @@ async function renderItems() {
       <div class="toolbar">
         <input class="filter-input" id="itFilter" placeholder="🔍 ابحث بالاسم أو الكود..." oninput="renderItemsGrid(this.value)">
         <div class="spacer"></div>
+        <button onclick="window.location.href='import-items.html'">📥 استيراد من إكسل</button>
         <button class="btn-gold" onclick="openAddItemModal()">+ إضافة صنف</button>
       </div>
       <div class="list-grid" id="itGrid"></div>
@@ -486,9 +479,6 @@ async function submitAddItem() {
   renderItems();
 }
 
-/* ============================================================
-   5) الموردين
-   ============================================================ */
 async function renderSuppliers() {
   const result = await SuppliersClient.list(currentCompanyId);
   cache.suppliers = result.ok ? result.suppliers : [];
@@ -540,9 +530,6 @@ async function submitAddSupplier() {
   renderSuppliers();
 }
 
-/* ============================================================
-   6) تسجيل بيع — بحث حي + معاينة فاتورة حية
-   ============================================================ */
 async function renderNewSale() {
   const [c, a, i] = await Promise.all([
     CustomersClient.list(currentCompanyId), AgentsClient.list(currentCompanyId), ItemsClient.list(currentCompanyId),
@@ -563,8 +550,14 @@ async function renderNewSale() {
           ${searchSelectHtml('saleAgent', 'ابحث عن مندوب...')}
           <label style="display:block;font-size:12px;color:var(--ink-soft);margin:12px 0 4px">الصنف</label>
           ${searchSelectHtml('saleItem', 'ابحث عن صنف...')}
-          <input id="s_qty" type="number" placeholder="الكمية" min="1" style="margin-top:10px">
-          <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-top:8px">
+
+          <label style="display:block;font-size:12px;color:var(--ink-soft);margin:12px 0 4px">الكمية والوحدة</label>
+          <div class="unit-select-row">
+            <input id="s_qty" type="number" placeholder="الكمية" min="1">
+            <select id="s_unit" onchange="updateSalePreview()"></select>
+          </div>
+
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-top:12px">
             <input id="s_credit" type="checkbox" style="width:auto"> بيع بالآجل (على الحساب)
           </label><br><br>
           <button class="btn-gold" onclick="submitSaleAction()">✅ تسجيل البيع</button>
@@ -579,31 +572,35 @@ async function renderNewSale() {
 
   initSearchSelect('saleCust', cache.customers.map(c => ({ id: c.id, name: c.name, subtitle: c.code })));
   initSearchSelect('saleAgent', cache.agents.map(a => ({ id: a.id, name: a.name })));
-  initSearchSelect('saleItem', cache.items.map(i => ({ id: i.id, name: i.name, subtitle: 'متاح: ' + (i.stock_qty||0) })), (id) => {
+  initSearchSelect('saleItem', cache.items.map(i => ({ id: i.id, name: i.name, subtitle: 'متاح: ' + (i.stock_qty||0) })), async (id) => {
     saleLineItem = cache.items.find(i => i.id === id);
+    await populateUnitSelect('s_unit', id);
     updateSalePreview();
   });
   document.getElementById('s_qty').addEventListener('input', updateSalePreview);
 }
 function updateSalePreview() {
   const qty = parseFloat(document.getElementById('s_qty').value) || 0;
+  const unitSelect = document.getElementById('s_unit');
+  const unitName = unitSelect.value || null;
   const el = document.getElementById('salePreview');
   if (!saleLineItem || !qty) { el.innerHTML = '<div class="empty-state" style="padding:14px">اختر صنف وكمية</div>'; return; }
   const total = qty * (saleLineItem.unit_price || 0);
   el.innerHTML = `
-    <div class="invoice-line"><span>${saleLineItem.name}</span><span>${qty} × ${(saleLineItem.unit_price||0).toFixed(3)}</span></div>
+    <div class="invoice-line"><span>${saleLineItem.name}</span><span>${qty} ${unitName || ''} × ${(saleLineItem.unit_price||0).toFixed(3)}</span></div>
     <div class="invoice-total"><span>الإجمالي</span><span>${total.toFixed(3)} د.ك</span></div>`;
 }
 async function submitSaleAction() {
   const itemId = getSearchSelectValue('saleItem');
   const qty = parseFloat(document.getElementById('s_qty').value);
+  const unitName = document.getElementById('s_unit').value || null;
   if (!itemId || !qty || qty <= 0) { document.getElementById('saleMsg').innerHTML = '<span class="msg-error">اختر صنف وكمية صحيحة</span>'; return; }
   const item = cache.items.find(i => i.id === itemId);
   const payload = {
     company_id: currentCompanyId,
     customer_id: getSearchSelectValue('saleCust') || null,
     agent_id: getSearchSelectValue('saleAgent') || null,
-    items: [{ item_id: itemId, qty, unit_price: item?.unit_price||0, unit_cost: item?.unit_cost||0 }],
+    items: [{ item_id: itemId, qty, unit_price: item?.unit_price||0, unit_cost: item?.unit_cost||0, uom_unit_name: unitName }],
     is_credit: document.getElementById('s_credit').checked,
   };
   const result = await SalesClient.postSale(payload);
@@ -612,9 +609,6 @@ async function submitSaleAction() {
   renderNewSale();
 }
 
-/* ============================================================
-   7) تسجيل شراء
-   ============================================================ */
 async function renderNewPurchase() {
   const [s, i] = await Promise.all([SuppliersClient.list(currentCompanyId), ItemsClient.list(currentCompanyId)]);
   cache.suppliers = s.ok ? s.suppliers : [];
@@ -630,8 +624,14 @@ async function renderNewPurchase() {
           ${searchSelectHtml('purSup', 'ابحث عن مورد...')}
           <label style="display:block;font-size:12px;color:var(--ink-soft);margin:12px 0 4px">الصنف</label>
           ${searchSelectHtml('purItem', 'ابحث عن صنف...')}
-          <input id="p_qty" type="number" placeholder="الكمية" min="1" style="margin-top:10px">
-          <input id="p_cost" type="number" step="0.001" placeholder="سعر التكلفة للوحدة" style="margin-top:6px">
+
+          <label style="display:block;font-size:12px;color:var(--ink-soft);margin:12px 0 4px">الكمية والوحدة</label>
+          <div class="unit-select-row">
+            <input id="p_qty" type="number" placeholder="الكمية" min="1">
+            <select id="p_unit" onchange="updatePurchasePreview()"></select>
+          </div>
+
+          <input id="p_cost" type="number" step="0.001" placeholder="سعر التكلفة (للوحدة المختارة)" style="margin-top:6px">
           <input id="p_tax" type="number" step="0.1" placeholder="نسبة الضريبة % (اختياري)" value="0" style="margin-top:6px">
           <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-top:8px">
             <input id="p_credit" type="checkbox" style="width:auto"> شراء بالآجل
@@ -647,8 +647,9 @@ async function renderNewPurchase() {
     </div>`;
 
   initSearchSelect('purSup', cache.suppliers.map(s => ({ id: s.id, name: s.name })));
-  initSearchSelect('purItem', cache.items.map(i => ({ id: i.id, name: i.name })), (id) => {
+  initSearchSelect('purItem', cache.items.map(i => ({ id: i.id, name: i.name })), async (id) => {
     purchaseLineItem = cache.items.find(i => i.id === id);
+    await populateUnitSelect('p_unit', id);
     updatePurchasePreview();
   });
   document.getElementById('p_qty').addEventListener('input', updatePurchasePreview);
@@ -659,11 +660,12 @@ function updatePurchasePreview() {
   const qty = parseFloat(document.getElementById('p_qty').value) || 0;
   const cost = parseFloat(document.getElementById('p_cost').value) || 0;
   const tax = parseFloat(document.getElementById('p_tax').value) || 0;
+  const unitName = document.getElementById('p_unit').value || '';
   const el = document.getElementById('purPreview');
   if (!purchaseLineItem || !qty || !cost) { el.innerHTML = '<div class="empty-state" style="padding:14px">اختر صنف وكمية وسعر</div>'; return; }
   const sub = qty * cost, taxAmt = sub * tax / 100;
   el.innerHTML = `
-    <div class="invoice-line"><span>${purchaseLineItem.name}</span><span>${qty} × ${cost.toFixed(3)}</span></div>
+    <div class="invoice-line"><span>${purchaseLineItem.name}</span><span>${qty} ${unitName} × ${cost.toFixed(3)}</span></div>
     <div class="invoice-line"><span>الضريبة (${tax}%)</span><span>${taxAmt.toFixed(3)}</span></div>
     <div class="invoice-total"><span>الإجمالي</span><span>${(sub+taxAmt).toFixed(3)} د.ك</span></div>`;
 }
@@ -672,11 +674,12 @@ async function submitPurchaseAction() {
   const qty = parseFloat(document.getElementById('p_qty').value);
   const unitCost = parseFloat(document.getElementById('p_cost').value);
   const taxRate = parseFloat(document.getElementById('p_tax').value) || 0;
+  const unitName = document.getElementById('p_unit').value || null;
   if (!itemId || !qty || qty <= 0 || !unitCost) { document.getElementById('purMsg').innerHTML = '<span class="msg-error">اختر صنف واكتب كمية وسعر صحيحين</span>'; return; }
   const payload = {
     company_id: currentCompanyId,
     supplier_id: getSearchSelectValue('purSup') || null,
-    items: [{ item_id: itemId, qty, unit_cost: unitCost, tax_rate: taxRate }],
+    items: [{ item_id: itemId, qty, unit_cost: unitCost, tax_rate: taxRate, uom_unit_name: unitName }],
     is_credit: document.getElementById('p_credit').checked,
   };
   const result = await PurchasesClient.postPurchase(payload);
@@ -685,9 +688,6 @@ async function submitPurchaseAction() {
   renderNewPurchase();
 }
 
-/* ============================================================
-   8) كشف حساب عميل
-   ============================================================ */
 async function renderCustomerStatement() {
   const c = await CustomersClient.list(currentCompanyId);
   cache.customers = c.ok ? c.customers : [];
