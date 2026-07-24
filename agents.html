@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>المناديب</title>
+<link rel="stylesheet" href="design-system.css">
+<style>
+  body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+  table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; }
+  th, td { padding: 10px; border: 1px solid #ddd; text-align: right; }
+  th { background: #2c3e50; color: white; }
+  .form-box { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+  input { padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
+  button { padding: 8px 16px; background: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+  .error { color: red; }
+  nav a { margin-left: 15px; }
+</style>
+</head>
+<body>
+
+<nav><a href="customers.html">العملاء</a> | <a href="agents.html">المناديب</a></nav>
+<header class="app-header">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="27" y="52" width="10" height="24" rx="2.5" fill="#b8932f"/>
+        <rect x="41" y="42" width="10" height="34" rx="2.5" fill="#b8932f"/>
+        <rect x="55" y="30" width="10" height="46" rx="2.5" fill="#b8932f"/>
+        <rect x="69" y="18" width="10" height="58" rx="2.5" fill="#d9bc8c"/>
+      </svg>
+    </div>
+    <div class="brand-name">prova<small>UNIFIED ERP SYSTEM</small></div>
+  </div>
+</header>
+<nav class="app-nav">
+  <a href="customers.html">العملاء</a>
+  <a href="agents.html">المناديب</a>
+</nav>
+<div class="page-container">
+<h2>🧑‍💼 المناديب</h2>
+
+<div class="form-box">
+  <h3>إضافة مندوب جديد</h3>
+  <input id="agCode" placeholder="الكود">
+  <input id="agName" placeholder="الاسم">
+  <input id="agPhone" placeholder="التليفون">
+  <input id="agCommission" placeholder="نسبة العمولة %" type="number" step="0.1">
+  <button onclick="addAgent()">إضافة</button>
+  <div id="formMsg"></div>
+</div>
+
+<table>
+  <thead>
+    <tr><th>الكود</th><th>الاسم</th><th>التليفون</th><th>نسبة العمولة</th></tr>
+  </thead>
+  <tbody id="agTableBody"></tbody>
+</table>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script>
+  let currentCompanyId = null;
+
+  async function init() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      alert('لازم تسجل دخول الأول من test-auth.html');
+      return;
+    }
+    const companyInfo = await AuthClientV2.getCurrentCompany();
+    if (!companyInfo.ok) {
+      alert('خطأ فى جلب بيانات الشركة: ' + companyInfo.error);
+      return;
+    }
+    currentCompanyId = companyInfo.company_id;
+    loadAgents();
+  }
+
+  async function loadAgents() {
+    const result = await AgentsClient.list(currentCompanyId);
+    const tbody = document.getElementById('agTableBody');
+    if (!result.ok) {
+      tbody.innerHTML = `<tr><td colspan="4" class="error">${result.error}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = result.agents.map(a => `
+      <tr>
+        <td>${a.code || ''}</td>
+        <td>${a.name || ''}</td>
+        <td>${a.phone || ''}</td>
+        <td>${a.commission_rate || 0}%</td>
+      </tr>
+    `).join('') || '<tr><td colspan="4">لا يوجد مناديب بعد</td></tr>';
+  }
+
+  async function addAgent() {
+    const agent = {
+      code: document.getElementById('agCode').value,
+      name: document.getElementById('agName').value,
+      phone: document.getElementById('agPhone').value,
+      commission_rate: parseFloat(document.getElementById('agCommission').value) || 0,
+    };
+    if (!agent.name) {
+      document.getElementById('formMsg').innerHTML = '<span class="error">اسم المندوب مطلوب</span>';
+      return;
+    }
+    const result = await AgentsClient.create(currentCompanyId, agent);
+    if (!result.ok) {
+      document.getElementById('formMsg').innerHTML = `<span class="error">${result.error}</span>`;
+      return;
+    }
+    document.getElementById('formMsg').innerHTML = '✅ تم الإضافة';
+    document.getElementById('agCode').value = '';
+    document.getElementById('agName').value = '';
+    document.getElementById('agPhone').value = '';
+    document.getElementById('agCommission').value = '';
+    loadAgents();
+  }
+
+  init();
+</script>
+</body>
+</html>

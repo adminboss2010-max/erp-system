@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>الموردين</title>
+<link rel="stylesheet" href="design-system.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="27" y="52" width="10" height="24" rx="2.5" fill="#b8932f"/>
+        <rect x="41" y="42" width="10" height="34" rx="2.5" fill="#b8932f"/>
+        <rect x="55" y="30" width="10" height="46" rx="2.5" fill="#b8932f"/>
+        <rect x="69" y="18" width="10" height="58" rx="2.5" fill="#d9bc8c"/>
+      </svg>
+    </div>
+    <div class="brand-name">prova<small>UNIFIED ERP SYSTEM</small></div>
+  </div>
+</header>
+<nav class="app-nav">
+  <a href="customers.html">العملاء</a>
+  <a href="agents.html">المناديب</a>
+  <a href="items.html">الأصناف</a>
+  <a href="sales.html">تسجيل بيع</a>
+  <a href="statement.html">كشف حساب عميل</a>
+  <a href="suppliers.html" class="active">الموردين</a>
+  <a href="purchases.html">تسجيل شراء</a>
+</nav>
+<div class="page-container">
+
+<h2 class="page-title">🚚 الموردين</h2>
+
+<div class="card">
+  <h3>إضافة مورد جديد</h3>
+  <input id="supCode" placeholder="الكود">
+  <input id="supName" placeholder="الاسم">
+  <input id="supPhone" placeholder="التليفون">
+  <input id="supTax" placeholder="الرقم الضريبي (اختياري)">
+  <button onclick="addSupplier()">إضافة</button>
+  <div id="formMsg"></div>
+</div>
+
+<table>
+  <thead>
+    <tr><th>الكود</th><th>الاسم</th><th>التليفون</th><th>الرقم الضريبي</th><th>الرصيد (له)</th></tr>
+  </thead>
+  <tbody id="supTableBody"></tbody>
+</table>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script>
+  let currentCompanyId = null;
+
+  async function init() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) { alert('لازم تسجل دخول الأول من test-auth.html'); return; }
+    const companyInfo = await AuthClientV2.getCurrentCompany();
+    if (!companyInfo.ok) { alert('خطأ: ' + companyInfo.error); return; }
+    currentCompanyId = companyInfo.company_id;
+    loadSuppliers();
+  }
+
+  async function loadSuppliers() {
+    const result = await SuppliersClient.list(currentCompanyId);
+    const tbody = document.getElementById('supTableBody');
+    if (!result.ok) {
+      tbody.innerHTML = `<tr><td colspan="5" class="msg-error">${result.error}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = result.suppliers.map(s => `
+      <tr>
+        <td>${s.code || ''}</td>
+        <td>${s.name || ''}</td>
+        <td>${s.phone || ''}</td>
+        <td>${s.tax_number || '—'}</td>
+        <td>${(s.balance || 0).toFixed(3)}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="5">لا يوجد موردين بعد</td></tr>';
+  }
+
+  async function addSupplier() {
+    const supplier = {
+      code: document.getElementById('supCode').value,
+      name: document.getElementById('supName').value,
+      phone: document.getElementById('supPhone').value,
+      tax_number: document.getElementById('supTax').value,
+    };
+    if (!supplier.name) {
+      document.getElementById('formMsg').innerHTML = '<span class="msg-error">اسم المورد مطلوب</span>';
+      return;
+    }
+    const result = await SuppliersClient.create(currentCompanyId, supplier);
+    if (!result.ok) {
+      document.getElementById('formMsg').innerHTML = `<span class="msg-error">${result.error}</span>`;
+      return;
+    }
+    document.getElementById('formMsg').innerHTML = '<span class="msg-success">✅ تم الإضافة</span>';
+    ['supCode','supName','supPhone','supTax'].forEach(id => document.getElementById(id).value = '');
+    loadSuppliers();
+  }
+
+  init();
+</script>
+</body>
+</html>

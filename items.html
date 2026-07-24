@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>الأصناف</title>
+<link rel="stylesheet" href="design-system.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="27" y="52" width="10" height="24" rx="2.5" fill="#b8932f"/>
+        <rect x="41" y="42" width="10" height="34" rx="2.5" fill="#b8932f"/>
+        <rect x="55" y="30" width="10" height="46" rx="2.5" fill="#b8932f"/>
+        <rect x="69" y="18" width="10" height="58" rx="2.5" fill="#d9bc8c"/>
+      </svg>
+    </div>
+    <div class="brand-name">prova<small>UNIFIED ERP SYSTEM</small></div>
+  </div>
+</header>
+<nav class="app-nav">
+  <a href="customers.html">العملاء</a>
+  <a href="agents.html">المناديب</a>
+  <a href="items.html" class="active">الأصناف</a>
+  <a href="sales.html">تسجيل بيع</a>
+</nav>
+<div class="page-container">
+
+<h2 class="page-title">📦 الأصناف</h2>
+
+<div class="card">
+  <h3>إضافة صنف جديد</h3>
+  <input id="itCode" placeholder="الكود">
+  <input id="itName" placeholder="الاسم">
+  <input id="itCost" placeholder="سعر التكلفة" type="number" step="0.001">
+  <input id="itPrice" placeholder="سعر البيع" type="number" step="0.001">
+  <input id="itStock" placeholder="الكمية الابتدائية" type="number">
+  <button onclick="addItem()">إضافة</button>
+  <div id="formMsg"></div>
+</div>
+
+<table>
+  <thead>
+    <tr><th>الكود</th><th>الاسم</th><th>التكلفة</th><th>سعر البيع</th><th>المخزون</th></tr>
+  </thead>
+  <tbody id="itemsTableBody"></tbody>
+</table>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script>
+  let currentCompanyId = null;
+
+  async function init() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) { alert('لازم تسجل دخول الأول من test-auth.html'); return; }
+    const companyInfo = await AuthClientV2.getCurrentCompany();
+    if (!companyInfo.ok) { alert('خطأ: ' + companyInfo.error); return; }
+    currentCompanyId = companyInfo.company_id;
+    loadItems();
+  }
+
+  async function loadItems() {
+    const result = await ItemsClient.list(currentCompanyId);
+    const tbody = document.getElementById('itemsTableBody');
+    if (!result.ok) {
+      tbody.innerHTML = `<tr><td colspan="5" class="msg-error">${result.error}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = result.items.map(i => `
+      <tr>
+        <td>${i.code || ''}</td>
+        <td>${i.name || ''}</td>
+        <td>${i.unit_cost || 0}</td>
+        <td>${i.unit_price || 0}</td>
+        <td>${i.stock_qty || 0}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="5">لا يوجد أصناف بعد</td></tr>';
+  }
+
+  async function addItem() {
+    const item = {
+      code: document.getElementById('itCode').value,
+      name: document.getElementById('itName').value,
+      unit_cost: parseFloat(document.getElementById('itCost').value) || 0,
+      unit_price: parseFloat(document.getElementById('itPrice').value) || 0,
+      stock_qty: parseFloat(document.getElementById('itStock').value) || 0,
+    };
+    if (!item.name || !item.code) {
+      document.getElementById('formMsg').innerHTML = '<span class="msg-error">الكود والاسم مطلوبين</span>';
+      return;
+    }
+    const result = await ItemsClient.create(currentCompanyId, item);
+    if (!result.ok) {
+      document.getElementById('formMsg').innerHTML = `<span class="msg-error">${result.error}</span>`;
+      return;
+    }
+    document.getElementById('formMsg').innerHTML = '<span class="msg-success">✅ تم الإضافة</span>';
+    ['itCode','itName','itCost','itPrice','itStock'].forEach(id => document.getElementById(id).value = '');
+    loadItems();
+  }
+
+  init();
+</script>
+</body>
+</html>

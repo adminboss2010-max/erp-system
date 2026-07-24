@@ -4436,7 +4436,7 @@ const Invoice = {
     }
   },
 
-  convertToTransaction(silent) {
+  async convertToTransaction(silent) {
     if (!this._currentInv) return;
     const inv = this._currentInv;
     const t = this.totals(inv);
@@ -4449,29 +4449,118 @@ const Invoice = {
       return;
     }
     O.tx = O.tx || [];
-    // 🛡️ لو الفاتورة دي اتسجّلت كحركة قبل كده، نحدّث نفس الحركة بدل ما نكرّرها
-    const existingIdx = O.tx.findIndex(x => x.invoice === inv.id);
-    const tx = {
-      id: existingIdx >= 0 ? O.tx[existingIdx].id : ('TX-' + Date.now()),
-      dt: inv.dt,
-      client: inv.client,
-      cl: inv.client,
-      ag: inv.agent || '',
-      tp: 'sale',
-      amount: t.total,
-      items: inv.items.map(it => ({ nm: it.nm, qty: it.qty, price: it.price })),
-      source: 'invoice',
-      invoice: inv.id,
-      note: 'من فاتورة ' + inv.id,
-      ts: Date.now(),
-      _v: (typeof SEED !== 'undefined' && SEED._v) || 'auto',
-    };
-    if (existingIdx >= 0) O.tx[existingIdx] = tx; else O.tx.push(tx);
-    inv._postedToTx = true;
-    if (typeof nayefSaveData === 'function') nayefSaveData();
-    if (!silent && typeof showToast === 'function') showToast('✅', 'تم تسجيل الحركة على حساب ' + inv.client, true);
-    if (typeof AuditLog !== 'undefined') {
-      try { AuditLog.log('invoice_to_tx', '🧾→💼 تحويل فاتورة لحركة', { invoice: inv.id, client: inv.client, amount: t.total }); } catch(e) {}
+
+    // 🛡️ فاتورة اترحّلت فعليًا قبل كده (خصمت من المخزون الحقيقي) — تعديلها يحتاج مرتجع/تسوية، غير مبني لسه
+    if (inv._postedToSupabase) {
+      if (!silent && typeof showToast === 'function') {
+        showToast('ℹ️', 'الفاتورة دي مسجّلة كحركة بيع فعلية بالفعل (مستند رقم ' + inv._supabaseDocNo + ') — تعديل فاتورة مُرحّلة يحتاج مرتجع، غير مبني لسه', false);
+      }
+      return;
+    }
+
+    // 🛡️ post_sale_transaction الحالية بتفهم بس "نقدي بالكامل" أو "آجل بالكامل"
+    if (t.paid > 0 && t.due > 0) {
+      if (typeof showToast === 'function') showToast('⚠️', 'الفاتورة مدفوعة جزئيًا — التسجيل الآلي كحركة بيع بيدعم بس "مدفوعة بالكامل" أو "آجل بالكامل" حاليًا', false);
+      return;
+    }
+
+    // 🛡️ كل سطر لازم يكون مرتبط بصنف حقيقي من المخزون (code) — وإلا مفيش حاجة نخصمها فعليًا
+    const missingCode = (inv.items || []).find(it => !it.code);
+    if (missingCode) {
+      if (typeof showToast === 'function') showToast('⚠️', 'الصنف "' + (missingCode.nm || '—') + '" غير مرتبط بصنف حقيقي من المخزون — اختره من القائمة المنسدلة', false);
+      return;
+    }
+
+    const erpCompany = JSON.parse(localStorage.getItem('erp_company') || 'null');
+    if (!erpCompany || !erpCompany.id) {
+      if (typeof showToast === 'function') showToast('❌', 'لا توجد جلسة شركة صالحة — سجّل دخول من جديد', false);
+      return;
+    }
+
+    const supabase = window.ApiClient && window.ApiClient._supabase;
+    if (!supabase) {
+      if (typeof showToast === 'function') showToast('❌', 'تعذّر الاتصال بـ Supabase', false);
+      return;
+    }
+
+    try {
+      // 1) تحويل أكواد الأصناف لـ item_id حقيقي (UUID) من Supabase
+      const codes = [...new Set(inv.items.map(it => it.code))];
+      const { data: itemRows, error: itemsErr } = await supabase
+        .from('items').select('id, code').eq('company_id', erpCompany.id).in('code', codes);
+      if (itemsErr) throw new Error('تعذّر جلب الأصناف: ' + itemsErr.message);
+
+      const codeToId = {};
+      (itemRows || []).forEach(r => { codeToId[r.code] = r.id; });
+      const notFound = codes.filter(c => !codeToId[c]);
+      if (notFound.length) throw new Error('أصناف غير موجودة في مخزون Supabase: ' + notFound.join(', '));
+
+      // 2) تحويل اسم العميل/المندوب لـ id حقيقي (لو موجودين بنفس الاسم)
+      let customerId = null;
+      if (inv.client) {
+        const { data: custRow } = await supabase
+          .from('customers').select('id').eq('company_id', erpCompany.id).eq('name', inv.client).maybeSingle();
+        customerId = custRow ? custRow.id : null;
+      }
+      let agentId = null;
+      if (inv.agent) {
+        const { data: agentRow } = await supabase
+          .from('agents').select('id').eq('company_id', erpCompany.id).eq('name', inv.agent).maybeSingle();
+        agentId = agentRow ? agentRow.id : null;
+      }
+
+      const isCredit = t.due > 0;
+      if (isCredit && !customerId) {
+        throw new Error('البيع بالآجل يتطلب عميل حقيقي موجود بنفس الاسم في قائمة العملاء بـ Supabase');
+      }
+
+      const items = inv.items.map(it => ({
+        item_id: codeToId[it.code],
+        qty: it.qty,
+        unit_cost: it.uc || 0,
+        unit_price: it.price || 0
+      }));
+
+      const result = await window.ApiClient.sales.postSale({
+        company_id: erpCompany.id,
+        customer_id: customerId,
+        agent_id: agentId,
+        items: items,
+        is_credit: isCredit
+      });
+
+      if (!result.ok) throw new Error(result.error || 'فشل تسجيل الفاتورة كحركة بيع');
+
+      inv._postedToSupabase = true;
+      inv._supabaseDocNo = result.doc_no;
+      this.upsert(inv);
+
+      // 🛡️ لو الفاتورة دي اتسجّلت كحركة محلية قبل كده، نحدّث نفس الحركة بدل ما نكرّرها
+      const existingIdx = O.tx.findIndex(x => x.invoice === inv.id);
+      const tx = {
+        id: existingIdx >= 0 ? O.tx[existingIdx].id : ('TX-' + Date.now()),
+        dt: inv.dt,
+        client: inv.client,
+        cl: inv.client,
+        ag: inv.agent || '',
+        tp: 'sale',
+        amount: t.total,
+        items: inv.items.map(it => ({ nm: it.nm, qty: it.qty, price: it.price })),
+        source: 'invoice',
+        invoice: inv.id,
+        note: 'من فاتورة ' + inv.id + ' (مستند Supabase #' + result.doc_no + ')',
+        ts: Date.now(),
+        _v: (typeof SEED !== 'undefined' && SEED._v) || 'auto',
+      };
+      if (existingIdx >= 0) O.tx[existingIdx] = tx; else O.tx.push(tx);
+      if (typeof nayefSaveData === 'function') nayefSaveData();
+
+      if (!silent && typeof showToast === 'function') showToast('✅', 'تم تسجيل الفاتورة كحركة بيع حقيقية (مستند #' + result.doc_no + ') وخصم المخزون فعليًا', true);
+      if (typeof AuditLog !== 'undefined') {
+        try { AuditLog.log('invoice_to_tx', '🧾→💼 تحويل فاتورة لحركة (Supabase)', { invoice: inv.id, client: inv.client, amount: t.total, doc_no: result.doc_no }); } catch(e) {}
+      }
+    } catch (e) {
+      if (typeof showToast === 'function') showToast('❌ فشل تسجيل الحركة', e.message || String(e), false);
     }
   },
 

@@ -1,0 +1,210 @@
+/*
+============================================================
+design-system.css — نظام التصميم الموحّد لمنصة prova
+============================================================
+مصدر القيم: مستخرجة حرفيًا من index.html الأصلي (لا تُخترع، دي القيم الحقيقية).
+أي صفحة جديدة فى النظام (customers.html, agents.html, ...) لازم تربط الملف ده
+بدل ما تكرر ألوان أو خطوط بنفسها. أي تغيير شكل مستقبلي (لوجو، ألوان) يتم هنا بس،
+ويظهر تلقائيًا فى كل الصفحات اللى بتستخدم الملف ده.
+============================================================
+*/
+
+:root{
+  /* الألوان الأساسية (Navy — الأزرق الكحلي الغامق) */
+  --navy-0:#0a1326;
+  --navy-1:#0f1b33;
+  --navy-2:#1a2744;
+  --navy-3:#243456;
+  --navy-4:#3a4a6e;
+
+  /* الألوان الثانوية (Gold — الذهبي) */
+  --gold-1:#8a6f24;
+  --gold-2:#b8932f;
+  --gold-3:#d9bc8c;
+  --gold-4:#ecd6ad;
+
+  /* ألوان النصوص */
+  --ink:#1a2238;
+  --ink-soft:#5a6478;
+  --ink-mute:#8a93a6;
+
+  /* الخلفيات */
+  --paper:#f7f5ef;
+  --paper-2:#ffffff;
+  --line:#e5e0d2;
+  --line-soft:rgba(15,27,51,0.08);
+
+  /* ألوان الحالة */
+  --danger:#c0392b;
+  --danger-soft:#fdecea;
+  --success:#1f7a4d;
+  --success-soft:#e6f4ec;
+
+  /* الهندسة والظلال */
+  --radius:14px;
+  --radius-sm:8px;
+  --shadow-sm:0 1px 2px rgba(15,27,51,0.04), 0 2px 6px rgba(15,27,51,0.04);
+  --shadow-md:0 4px 16px rgba(15,27,51,0.06), 0 12px 40px rgba(15,27,51,0.08);
+  --shadow-lg:0 20px 60px rgba(10,19,38,0.18);
+
+  /* الخطوط */
+  --font-ar:'IBM Plex Sans Arabic', system-ui, sans-serif;
+  --font-display:'Manrope','IBM Plex Sans Arabic', sans-serif;
+  --font-mono:'IBM Plex Mono', monospace;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:var(--font-ar);
+  color:var(--ink);
+  background:var(--paper);
+}
+
+/* ============ الهيدر الموحّد لكل صفحات النظام ============ */
+.app-header{
+  display:flex; align-items:center; justify-content:space-between;
+  background:linear-gradient(160deg, var(--navy-2), var(--navy-1));
+  padding:14px 24px;
+  box-shadow:var(--shadow-md);
+}
+.app-header .brand{
+  display:flex; align-items:center; gap:14px;
+}
+.brand-mark{
+  width:40px; height:40px;
+  display:grid; place-items:center;
+  background:linear-gradient(160deg, var(--navy-2), var(--navy-1));
+  border:1px solid rgba(217,188,140,0.18);
+  border-radius:10px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.25);
+}
+.brand-mark svg{width:24px; height:24px; display:block}
+.brand-name{
+  font-family:var(--font-display);
+  font-weight:800;
+  font-size:18px;
+  letter-spacing:0.5px;
+  color:var(--gold-4);
+}
+.brand-name small{
+  display:block;
+  font-family:var(--font-mono);
+  font-size:9px;
+  font-weight:500;
+  letter-spacing:1.5px;
+  color:var(--gold-3);
+  opacity:0.8;
+}
+
+/* ============ شريط التنقل بين الأقسام ============ */
+.app-nav{
+  display:flex; gap:4px;
+  background:var(--paper-2);
+  padding:8px 24px;
+  border-bottom:1px solid var(--line);
+  box-shadow:var(--shadow-sm);
+}
+.app-nav a{
+  font-family:var(--font-ar);
+  font-size:13px;
+  font-weight:600;
+  color:var(--ink-soft);
+  text-decoration:none;
+  padding:8px 16px;
+  border-radius:var(--radius-sm);
+  transition:all .15s;
+}
+.app-nav a:hover{ background:var(--paper); color:var(--ink) }
+.app-nav a.active{ background:var(--navy-1); color:var(--gold-4) }
+
+/* ============ حاوية المحتوى ============ */
+.page-container{ max-width:1100px; margin:0 auto; padding:24px }
+.page-title{
+  font-family:var(--font-display);
+  font-weight:800;
+  font-size:24px;
+  color:var(--ink);
+  margin:0 0 20px;
+}
+
+/* ============ صناديق الفورم ============ */
+.card{
+  background:var(--paper-2);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);
+  padding:18px;
+  margin-bottom:18px;
+}
+.card h3{
+  font-family:var(--font-display);
+  font-size:15px;
+  font-weight:700;
+  color:var(--ink);
+  margin:0 0 12px;
+}
+
+/* ============ عناصر الفورم ============ */
+input, select, textarea{
+  font-family:var(--font-ar);
+  font-size:13px;
+  padding:9px 12px;
+  margin:4px;
+  border:1px solid var(--line);
+  border-radius:var(--radius-sm);
+  background:var(--paper-2);
+  color:var(--ink);
+}
+input:focus, select:focus, textarea:focus{
+  outline:none;
+  border-color:var(--gold-2);
+  box-shadow:0 0 0 3px rgba(184,147,47,0.12);
+}
+button, .btn{
+  font-family:var(--font-ar);
+  font-size:13px;
+  font-weight:700;
+  padding:9px 20px;
+  margin:4px;
+  background:var(--navy-1);
+  color:#fff;
+  border:none;
+  border-radius:var(--radius-sm);
+  cursor:pointer;
+  transition:all .15s;
+}
+button:hover, .btn:hover{ background:var(--navy-2) }
+button.btn-gold{ background:linear-gradient(135deg, var(--gold-3), var(--gold-2)); color:var(--navy-0) }
+button.btn-danger{ background:var(--danger) }
+
+/* ============ الجداول ============ */
+table{
+  width:100%;
+  border-collapse:collapse;
+  background:var(--paper-2);
+  border-radius:var(--radius);
+  overflow:hidden;
+  box-shadow:var(--shadow-sm);
+}
+th{
+  background:var(--navy-1);
+  color:var(--gold-4);
+  font-family:var(--font-ar);
+  font-weight:600;
+  font-size:12.5px;
+  padding:11px;
+  text-align:right;
+}
+td{
+  padding:10px 11px;
+  border-bottom:1px solid var(--line);
+  font-size:13px;
+  color:var(--ink);
+}
+tr:hover td{ background:var(--paper) }
+
+/* ============ رسائل الحالة ============ */
+.msg-error{ color:var(--danger); font-size:12.5px; font-weight:600 }
+.msg-success{ color:var(--success); font-size:12.5px; font-weight:600 }

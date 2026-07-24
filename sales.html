@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>تسجيل بيع</title>
+<link rel="stylesheet" href="design-system.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="27" y="52" width="10" height="24" rx="2.5" fill="#b8932f"/>
+        <rect x="41" y="42" width="10" height="34" rx="2.5" fill="#b8932f"/>
+        <rect x="55" y="30" width="10" height="46" rx="2.5" fill="#b8932f"/>
+        <rect x="69" y="18" width="10" height="58" rx="2.5" fill="#d9bc8c"/>
+      </svg>
+    </div>
+    <div class="brand-name">prova<small>UNIFIED ERP SYSTEM</small></div>
+  </div>
+</header>
+<nav class="app-nav">
+  <a href="customers.html">العملاء</a>
+  <a href="agents.html">المناديب</a>
+  <a href="items.html">الأصناف</a>
+  <a href="sales.html" class="active">تسجيل بيع</a>
+</nav>
+<div class="page-container">
+
+<h2 class="page-title">🧾 تسجيل عملية بيع</h2>
+
+<div class="card">
+  <h3>بيانات الفاتورة</h3>
+  <select id="saleCustomer"><option value="">— اختر العميل —</option></select>
+  <select id="saleAgent"><option value="">— اختر المندوب (اختياري) —</option></select>
+  <select id="saleItem"><option value="">— اختر الصنف —</option></select>
+  <input id="saleQty" type="number" placeholder="الكمية" min="1">
+  <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px">
+    <input id="saleCredit" type="checkbox" style="width:auto"> بيع بالآجل (على الحساب)
+  </label>
+  <br>
+  <button class="btn-gold" onclick="submitSale()">تسجيل البيع</button>
+  <div id="saleMsg"></div>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script>
+  let currentCompanyId = null;
+  let itemsCache = [];
+
+  async function init() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) { alert('لازم تسجل دخول الأول من test-auth.html'); return; }
+    const companyInfo = await AuthClientV2.getCurrentCompany();
+    if (!companyInfo.ok) { alert('خطأ: ' + companyInfo.error); return; }
+    currentCompanyId = companyInfo.company_id;
+
+    const [customers, agents, items] = await Promise.all([
+      CustomersClient.list(currentCompanyId),
+      AgentsClient.list(currentCompanyId),
+      ItemsClient.list(currentCompanyId)
+    ]);
+
+    if (customers.ok) {
+      document.getElementById('saleCustomer').innerHTML += customers.customers.map(c =>
+        `<option value="${c.id}">${c.name}</option>`).join('');
+    }
+    if (agents.ok) {
+      document.getElementById('saleAgent').innerHTML += agents.agents.map(a =>
+        `<option value="${a.id}">${a.name}</option>`).join('');
+    }
+    if (items.ok) {
+      itemsCache = items.items;
+      document.getElementById('saleItem').innerHTML += items.items.map(i =>
+        `<option value="${i.id}">${i.name} (متاح: ${i.stock_qty})</option>`).join('');
+    }
+  }
+
+ async function submitSale() {
+  const itemId = document.getElementById('saleItem').value;
+  const qty = parseFloat(document.getElementById('saleQty').value);
+  const item = itemsCache.find(i => i.id === itemId);
+
+  if (!itemId || !qty || qty <= 0) {
+    document.getElementById('saleMsg').innerHTML = '<span class="msg-error">اختر صنف وكمية صحيحة</span>';
+    return;
+  }
+
+  const payload = {
+    company_id: currentCompanyId,
+    customer_id: document.getElementById('saleCustomer').value || null,
+    agent_id: document.getElementById('saleAgent').value || null,
+    items: [
+      {
+        item_id: itemId,
+        qty: qty,
+        unit_price: item ? item.unit_price : 0,
+        unit_cost: item ? item.unit_cost : 0
+      }
+    ],
+    is_credit: document.getElementById('saleCredit').checked
+  };
+
+  const result = await SalesClient.postSale(payload);
+  if (!result.ok) {
+    document.getElementById('saleMsg').innerHTML = `<span class="msg-error">${result.error}</span>`;
+    return;
+  }
+  document.getElementById('saleMsg').innerHTML =
+  `<span class="msg-success">✅ تم تسجيل البيع — رقم الفاتورة: ${result.transaction?.doc_no}، الإجمالي: ${result.transaction?.total_amount}</span>`;
+  document.getElementById('saleQty').value = '';
+  init();
+}
+
+  init();
+</script>
+</body>
+</html>

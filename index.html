@@ -619,7 +619,13 @@
 </div>
 
 <script src="config.js"></script>
+<script src="modules/02-sendtosentry.js"></script>
+<!-- 🛡️ لازم تتحمّل هنا (أول صفحة يزورها أي مستخدم، قبل تسجيل الدخول) لا في app.html فقط —
+     عشان مسح الـ localStorage الإجباري (مرة واحدة للأبد) يحصل قبل ما توكين الدخول يُكتب،
+     مش بعده. راجع modules/module-25.js -->
+<script src="modules/module-25.js"></script>
 <script src="version-check.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="api-client.js"></script>
 <script>
 // ===== Helpers =====

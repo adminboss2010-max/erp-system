@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head><meta charset="UTF-8"><title>اختبار Auth</title></head>
+<body>
+  <h2>تسجيل حساب جديد</h2>
+  <input id="regName" placeholder="اسم الشركة"><br>
+  <input id="regEmail" placeholder="الإيميل"><br>
+  <input id="regPass" type="password" placeholder="كلمة المرور"><br>
+  <button onclick="doRegister()">تسجيل</button>
+
+  <h2>تسجيل دخول</h2>
+  <input id="loginEmail" placeholder="الإيميل"><br>
+  <input id="loginPass" type="password" placeholder="كلمة المرور"><br>
+  <button onclick="doLogin()">دخول</button>
+  <button onclick="doGetCompany()">اجلب بيانات الشركة</button>
+
+  <pre id="output" style="background:#eee;padding:10px;margin-top:20px"></pre>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
+  <script>
+    function show(x) { document.getElementById('output').textContent = JSON.stringify(x, null, 2); }
+    async function doRegister() {
+      show(await AuthClientV2.register(regName.value, regEmail.value, regPass.value));
+    }
+    async function doLogin() {
+      show(await AuthClientV2.login(loginEmail.value, loginPass.value));
+    }
+    async function doGetCompany() {
+      show(await AuthClientV2.getCurrentCompany());
+    }
+  </script>
+</body>
+</html>

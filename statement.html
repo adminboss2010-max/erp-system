@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>كشف حساب العميل</title>
+<link rel="stylesheet" href="design-system.css">
+<style>
+  .controls-bar{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+  .letterhead{
+    background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius);
+    padding:24px 28px; margin-bottom:20px; box-shadow:var(--shadow-sm);
+  }
+  .letterhead-top{ display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid var(--navy-1); padding-bottom:16px; margin-bottom:16px }
+  .letterhead-company{ font-family:var(--font-display); font-weight:800; font-size:20px; color:var(--navy-1) }
+  .letterhead-title{ font-family:var(--font-display); font-weight:800; font-size:16px; color:var(--gold-2); text-align:left }
+  .letterhead-meta{ font-size:12px; color:var(--ink-soft) }
+  .info-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:4px }
+  .info-item .label{ font-size:11px; color:var(--ink-mute) }
+  .info-item .value{ font-size:14px; font-weight:700; color:var(--ink) }
+
+  .balance-summary{ display:flex; gap:16px; margin:18px 0 }
+  .balance-card{ flex:1; background:var(--paper-2); border-radius:var(--radius); padding:14px; text-align:center; box-shadow:var(--shadow-sm) }
+  .balance-card .label{ font-size:12px; color:var(--ink-soft) }
+  .balance-card .value{ font-family:var(--font-display); font-size:20px; font-weight:800; color:var(--ink); margin-top:6px }
+  .balance-card.closing .value{ color:var(--navy-1) }
+
+  .row-cash{ opacity:0.75 }
+  .badge-cash{ background:var(--success-soft); color:var(--success); font-size:10px; padding:2px 6px; border-radius:4px; margin-right:4px }
+  .type-return{ color:var(--danger) }
+  .type-payment{ color:var(--success) }
+
+  @media print{
+    .no-print{ display:none !important }
+    body{ background:#fff }
+    .page-container{ max-width:none; padding:0 }
+    .letterhead, table{ box-shadow:none; border:1px solid #ccc }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header no-print">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="27" y="52" width="10" height="24" rx="2.5" fill="#b8932f"/>
+        <rect x="41" y="42" width="10" height="34" rx="2.5" fill="#b8932f"/>
+        <rect x="55" y="30" width="10" height="46" rx="2.5" fill="#b8932f"/>
+        <rect x="69" y="18" width="10" height="58" rx="2.5" fill="#d9bc8c"/>
+      </svg>
+    </div>
+    <div class="brand-name">prova<small>UNIFIED ERP SYSTEM</small></div>
+  </div>
+</header>
+<nav class="app-nav no-print">
+  <a href="customers.html">العملاء</a>
+  <a href="agents.html">المناديب</a>
+  <a href="items.html">الأصناف</a>
+  <a href="sales.html">تسجيل بيع</a>
+  <a href="statement.html" class="active">كشف حساب</a>
+</nav>
+<div class="page-container">
+
+<h2 class="page-title no-print">📋 كشف حساب العميل</h2>
+
+<div class="card no-print">
+  <div class="controls-bar">
+    <select id="stCustomer"><option value="">— اختر العميل —</option></select>
+    <input id="stFrom" type="date">
+    <input id="stTo" type="date">
+    <button onclick="loadStatement()">عرض الكشف</button>
+    <button class="btn-gold" onclick="window.print()" id="printBtn" style="display:none">🖨️ طباعة / PDF</button>
+  </div>
+</div>
+
+<div id="statementOutput"></div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script>
+  let currentCompanyId = null;
+  const typeLabels = { sale: 'بيع', return: 'مرتجع', payment: 'سداد دفعة' };
+
+  async function init() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) { alert('لازم تسجل دخول الأول من test-auth.html'); return; }
+    const companyInfo = await AuthClientV2.getCurrentCompany();
+    if (!companyInfo.ok) { alert('خطأ: ' + companyInfo.error); return; }
+    currentCompanyId = companyInfo.company_id;
+
+    const customers = await CustomersClient.list(currentCompanyId);
+    if (customers.ok) {
+      document.getElementById('stCustomer').innerHTML += customers.customers.map(c =>
+        `<option value="${c.id}">${c.name}</option>`).join('');
+    }
+  }
+
+  async function loadStatement() {
+    const customerId = document.getElementById('stCustomer').value;
+    const fromDate = document.getElementById('stFrom').value;
+    const toDate = document.getElementById('stTo').value;
+
+    if (!customerId) { alert('اختر عميل الأول'); return; }
+
+    const [custResult, companyResult, openingResult, txResult] = await Promise.all([
+      StatementClient.getCustomer(customerId),
+      StatementClient.getCompany(currentCompanyId),
+      StatementClient.getBalanceBefore(currentCompanyId, customerId, fromDate),
+      StatementClient.getTransactionsInRange(currentCompanyId, customerId, fromDate, toDate)
+    ]);
+
+    if (!custResult.ok || !txResult.ok) {
+      document.getElementById('statementOutput').innerHTML =
+        `<div class="msg-error">${custResult.error || txResult.error}</div>`;
+      return;
+    }
+
+    let runningBalance = openingResult.ok ? openingResult.balance : 0;
+    const rows = txResult.transactions.map(t => {
+      const isCashSale = t.type === 'sale' && !t.debit && t.credit;
+      if (t.type === 'sale' && t.debit) runningBalance += t.debit;
+      if (t.type !== 'sale') runningBalance -= (t.credit || 0);
+
+      return `
+        <tr class="${isCashSale ? 'row-cash' : ''} type-${t.type}">
+          <td>${new Date(t.date).toLocaleDateString('ar-KW')}</td>
+          <td>${typeLabels[t.type] || t.type} ${isCashSale ? '<span class="badge-cash">نقدي</span>' : ''}</td>
+          <td>${t.items?.name || '—'}</td>
+          <td>${t.agents?.name || '—'}</td>
+          <td>${t.qty || '—'}</td>
+          <td>${t.debit ? t.debit.toFixed(3) : '—'}</td>
+          <td>${t.credit ? t.credit.toFixed(3) : '—'}</td>
+          <td><strong>${isCashSale ? '—' : runningBalance.toFixed(3)}</strong></td>
+        </tr>`;
+    }).join('');
+
+    const closingBalance = runningBalance;
+    const today = new Date().toLocaleDateString('ar-KW');
+
+    document.getElementById('statementOutput').innerHTML = `
+      <div class="letterhead">
+        <div class="letterhead-top">
+          <div class="letterhead-company">${companyResult.company?.name_ar || ''}</div>
+          <div>
+            <div class="letterhead-title">كشف حساب عميل</div>
+            <div class="letterhead-meta">تاريخ الإصدار: ${today}</div>
+          </div>
+        </div>
+        <div class="info-grid">
+          <div class="info-item"><div class="label">اسم العميل</div><div class="value">${custResult.customer.name}</div></div>
+          <div class="info-item"><div class="label">كود العميل</div><div class="value">${custResult.customer.code || '—'}</div></div>
+          <div class="info-item"><div class="label">التليفون</div><div class="value">${custResult.customer.phone || '—'}</div></div>
+          <div class="info-item"><div class="label">الفترة</div><div class="value">${fromDate || 'البداية'} → ${toDate || 'اليوم'}</div></div>
+        </div>
+      </div>
+
+      <div class="balance-summary">
+        <div class="balance-card">
+          <div class="label">الرصيد الافتتاحي</div>
+          <div class="value">${(openingResult.balance || 0).toFixed(3)} د.ك</div>
+        </div>
+        <div class="balance-card closing">
+          <div class="label">الرصيد الختامي</div>
+          <div class="value">${closingBalance.toFixed(3)} د.ك</div>
+        </div>
+        <div class="balance-card">
+          <div class="label">عدد الحركات</div>
+          <div class="value">${txResult.transactions.length}</div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>التاريخ</th><th>البيان</th><th>الصنف</th><th>المندوب</th><th>الكمية</th><th>مدين (آجل)</th><th>دائن (سداد)</th><th>الرصيد</th></tr>
+        </thead>
+        <tbody>
+          ${rows || '<tr><td colspan="8">لا توجد حركات فى هذه الفترة</td></tr>'}
+        </tbody>
+      </table>
+      <p style="font-size:11px;color:var(--ink-mute);margin-top:10px">
+        * الحركات المعلّم عليها "نقدي" مُدرجة للمعلومية فقط ولا تؤثر على الرصيد الجاري (بيع نقدي مدفوع فورًا).
+      </p>
+    `;
+
+    document.getElementById('printBtn').style.display = 'inline-block';
+  }
+
+  init();
+</script>
+</body>
+</html>

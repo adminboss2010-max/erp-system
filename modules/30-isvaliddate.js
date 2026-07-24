@@ -11164,19 +11164,6 @@ async function loadHandle(){
 
 // ══ INIT ══
 document.addEventListener('DOMContentLoaded',function(){
-  $('xlf').onchange=function(e){
-    if(e.target.files[0]){
-      const btn=document.querySelector('.upload-btn');if(btn)btn.classList.add('loading');
-      showToast('جارٍ تحديث الداشبورد...','قراءة '+e.target.files[0].name,false);
-      setTimeout(()=>readFile(e.target.files[0]),50);
-    }
-  };
-  document.body.addEventListener('dragover',e=>e.preventDefault());
-  document.body.addEventListener('drop',e=>{
-    e.preventDefault();
-    const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
-    if(f&&/\.(xlsx?|xlsm)$/i.test(f.name))readFile(f);
-  });
   if(typeof Chart!=='undefined'){
     // نظام موحّد للرسوم البيانية - زيتوني
     Chart.defaults.font.family='"Tajawal","Segoe UI",Tahoma,Arial,sans-serif';
@@ -11383,80 +11370,6 @@ async function handleExcelFile(event) {
     showToast('خطأ', 'فشل قراءة الملف: ' + err.message, false);
   }
   event.target.value = '';
-}
-
-function addTransaction() {
-  const societyOptions = O.soc.map(s => '<option value="' + s.nm + '">' + s.nm + '</option>').join('');
-  const agentOptions = [...new Set(O.soc.map(s => s.ag).filter(Boolean))].map(a => '<option value="' + a + '">' + a + '</option>').join('');
-  const modal = document.createElement('div');
-  modal.id = 'addTxModal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
-  modal.innerHTML = '<div style="background:#fff;border-radius:12px;padding:24px;max-width:500px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,0.3)">' +
-    '<h3 style="margin:0 0 16px;color:#1e8449;border-bottom:2px solid #1e8449;padding-bottom:8px">➕ إضافة معاملة جديدة</h3>' +
-    '<div style="display:flex;flex-direction:column;gap:12px">' +
-    '<label>التاريخ: <input type="date" id="newTxDate" value="' + new Date().toISOString().slice(0,10) + '" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px"></label>' +
-    '<label>رقم الفاتورة: <input type="number" id="newTxInv" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px"></label>' +
-    '<label>الجمعية: <select id="newTxClient" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px">' + societyOptions + '</select></label>' +
-    '<label>النوع: <select id="newTxType" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px"><option value="sale">فاتورة (مدين)</option><option value="return">مرتجع (دائن)</option><option value="payment">تحصيل/شيك (دائن)</option></select></label>' +
-    '<label>المبلغ (د.ك): <input type="number" step="0.001" id="newTxAmount" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px"></label>' +
-    '<label>المندوب: <select id="newTxAgent" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px">' + agentOptions + '</select></label>' +
-    '<label>ملاحظات: <input type="text" id="newTxNote" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px"></label>' +
-    '</div>' +
-    '<div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">' +
-    '<button onclick="document.getElementById(\'addTxModal\').remove()" style="padding:10px 20px;background:#95a5a6;color:#fff;border:none;border-radius:6px;cursor:pointer">إلغاء</button>' +
-    '<button onclick="saveNewTransaction()" style="padding:10px 20px;background:#1e8449;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:bold">💾 حفظ</button>' +
-    '</div></div>';
-  document.body.appendChild(modal);
-}
-
-async function saveNewTransaction() {
-  const dt = document.getElementById('newTxDate').value;
-  const inv = parseInt(document.getElementById('newTxInv').value) || 0;
-  const client = document.getElementById('newTxClient').value;
-  const type = document.getElementById('newTxType').value;
-  const amount = parseFloat(document.getElementById('newTxAmount').value) || 0;
-  const ag = document.getElementById('newTxAgent').value;
-  if (!dt || !client || amount === 0) {
-    showToast('خطأ', 'يرجى ملء التاريخ والجمعية والمبلغ', false);
-    return;
-  }
-  const newTx = {
-    id: 'TX-NEW-' + Date.now(),
-    dt: dt,
-    client: client,
-    cl: client,
-    i: inv,
-    items: [], // 🛡️ ملهاش صنف حقيقي — ده إدخال مالي عام (زي دفعة/تحصيل)، مش حركة مخزون.
-               // البيع الحقيقي اللي بيأثر على المخزون لازم يعدّي من شاشة "الفواتير".
-    amount: amount,
-    cost: 0,
-    tp: type,
-    ag: ag,
-    nt: document.getElementById('newTxNote').value || ''
-  };
-
-  // 🏭 Business Engine: تحقّق مركزي من الرصيد قبل ما نسمح بالعملية
-  // (نفس القاعدة هتتطبق مهما كانت الواجهة اللي بتضيف المعاملة مستقبلاً)
-  try {
-    if (window.ApiClient) {
-      const r = await ApiClient.sales.postTransaction(newTx);
-      if (!r.ok) {
-        showToast('❌ مرفوض', r.error || 'تعذّر تنفيذ العملية', false);
-        return;
-      }
-    }
-  } catch (e) {
-    if (typeof Logger !== 'undefined') Logger.warn('postTransaction engine call failed:', e);
-    // لو السيرفر مش متاح مؤقتاً، نكمل محليًا (تراجع لطيف بدل ما نوقف المستخدم بالكامل)
-  }
-
-  O.tx.push(newTx);
-  nayefSaveData();
-  initFilter();
-  sw('ov');
-  updateRefreshBtn();
-  document.getElementById('addTxModal').remove();
-  showToast('✅ تمت الإضافة', 'تمت إضافة المعاملة رقم ' + inv + ' بنجاح', true);
 }
 
 function resetLocalData() {

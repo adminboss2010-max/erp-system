@@ -6,6 +6,11 @@
 
 const ApiClient = {
 
+  // عميل Supabase (المرحلة 4 من الهجرة) — يُستخدم تدريجيًا بدل Apps Script، دالة بدالة
+  _supabase: (typeof window !== 'undefined' && window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY)
+    ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+    : null,
+
   _url() {
     if (!window.APPS_SCRIPT_URL) {
       console.error("ApiClient Error: window.APPS_SCRIPT_URL غير معرّف! تأكد من تحميل config.js أولاً.");
@@ -81,11 +86,56 @@ const ApiClient = {
 
   // ---------------- Authentication ----------------
   auth: {
-    ping() {
-      return ApiClient._call('ping', {}, false);
+    // فحص اتصال حقيقي بـ Supabase (بدل ping القديم على Apps Script)
+    async ping() {
+      try {
+        const res = await fetch(window.SUPABASE_URL + '/auth/v1/health', {
+          headers: { apikey: window.SUPABASE_ANON_KEY }
+        });
+        if (!res.ok) return { ok: false, error: `خطأ في السيرفر: ${res.status}` };
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: (e && e.message) || 'تعذّر الاتصال بالسيرفر، تحقق من الإنترنت.' };
+      }
     },
-    login(admin_email, password) {
-      return ApiClient._call('login', { admin_email, password }, false);
+    // دخول حقيقي عبر Supabase Auth + جلب الشركة المرتبطة بالمستخدم من company_users
+    async login(admin_email, password) {
+      const supabase = ApiClient._supabase;
+      if (!supabase) {
+        return { ok: false, error: 'تعذّر تحميل مكتبة Supabase.' };
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: admin_email,
+        password: password
+      });
+
+      if (error) {
+        const map = {
+          'Invalid login credentials': 'بيانات الدخول غير صحيحة',
+          'Email not confirmed': 'يرجى تأكيد بريدك الإلكتروني أولاً'
+        };
+        return { ok: false, error: map[error.message] || error.message };
+      }
+
+      const { data: membership, error: memErr } = await supabase
+        .from('company_users')
+        .select('role, companies(*)')
+        .eq('user_id', data.user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (memErr || !membership || !membership.companies) {
+        await supabase.auth.signOut();
+        return { ok: false, error: 'الحساب غير مرتبط بأي شركة.' };
+      }
+
+      const company = Object.assign({}, membership.companies, {
+        admin_email: data.user.email,
+        role: membership.role
+      });
+
+      return { ok: true, token: data.session.access_token, company: company };
     },
     register(name_ar, admin_email, password, logo) {
       return ApiClient._call('register', { name_ar, admin_email, password, logo: logo || '' }, false);
@@ -128,12 +178,27 @@ const ApiClient = {
 
   // ---------------- Business Engine ----------------
   sales: {
-    // معالجة وإرسال الفواتير والعمليات الحسابية بدعم الـ Idempotency الحرج لمنع التكرار
-    postTransaction(tx) {
-      if (!tx.i) {
-        console.warn("تنبيه أمني: يفضل توليد رقم مستند (doc_no) فريد لمنع تكرار الفاتورة.");
+    // تسجيل فاتورة بيع (صنف واحد أو أكثر) بشكل ذري فعلي عبر Edge Function الحقيقية —
+    // بتخصم من المخزون فعليًا في PostgreSQL، مش تسجيل محلي فقط
+    // payload: { company_id, customer_id?, agent_id?, items:[{item_id,qty,unit_cost?,unit_price?}], is_credit?, doc_no? }
+    async postSale(payload) {
+      try {
+        const res = await fetch(window.SUPABASE_URL + '/functions/v1/post-sale', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + window.SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (!res.ok || json.error) {
+          return { ok: false, error: json.error || `خطأ في السيرفر: ${res.status}`, details: json.details };
+        }
+        return Object.assign({ ok: true }, json.transaction);
+      } catch (e) {
+        return { ok: false, error: (e && e.message) || 'تعذّر الاتصال بالسيرفر، تحقق من الإنترنت.' };
       }
-      return ApiClient._call('postTransaction', tx);
     }
   },
 
@@ -178,3 +243,15 @@ const ApiClient = {
 };
 
 if (typeof window !== 'undefined') window.ApiClient = ApiClient;
+
+// مزامنة erp_token مع جلسة Supabase الحقيقية (بما فيها التجديد التلقائي بعد انتهاء صلاحية التوكين)
+// عشان الكود القديم اللي بيفحص localStorage['erp_token'] كـ truthy check (مثل 33-infragenerateqr.js) يفضل شغال بدون أي تعديل فيه
+if (ApiClient._supabase) {
+  ApiClient._supabase.auth.onAuthStateChange((_event, session) => {
+    if (session && session.access_token) {
+      localStorage.setItem('erp_token', session.access_token);
+    } else {
+      localStorage.removeItem('erp_token');
+    }
+  });
+}

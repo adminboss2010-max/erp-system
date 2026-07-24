@@ -200,7 +200,7 @@ alter table companies add column if not exists last_doc_number integer not null 
 2. استدعاء الدالة عبر HTTP فعلي (`Invoke-RestMethod` من PowerShell) لبيع 10 وحدات → نجح: `doc_no=1`, `total_amount=150`, `remaining_stock=90`. تم التحقق من قاعدة البيانات مباشرة (join بين `items`, `transactions`, `audit_log`) وتطابقت كل القيم. ✅
 3. محاولة بيع كمية أكبر من المخزون المتاح (`qty=999999`) → رُفضت العملية بكود `409 Conflict`، وتم التأكد أن `stock_qty` بقي **90** بدون أي تغيير جزئي (إثبات فعلي للذرية، وليس افتراضًا نظريًا). ✅
 
-**كيفية استدعاء الدالة (مرجع سريع)**:
+**كيفية استدعاء الدالة (مرجع سريع — قديم/تاريخي، كانت هذه نسخة صنف واحد فقط، راجع التصحيح أدناه)**:
 ```
 POST https://ucgujtkehiihlygykegx.supabase.co/functions/v1/post-sale
 Headers: Authorization: Bearer <publishable_key>, Content-Type: application/json
@@ -208,6 +208,44 @@ Body: { company_id, customer_id?, agent_id?, item_id, qty, unit_cost?, unit_pric
 ```
 
 **ملاحظة غير مكتملة بعد**: حقل `actor` في `audit_log` مسجّل حاليًا بقيمة ثابتة `'system'` — لم تُربط الدالة بعد بهوية المستخدم الفعلي المستدعي (JWT الخاص بالمستخدم). هذا يحتاج تعديل عند ربط الـ Edge Functions بطبقة الـ Auth بشكل كامل (على الأرجح عند بناء الواجهة الأمامية في المرحلة 4، حيث سيُمرَّر JWT المستخدم الحقيقي بدل الـ service_role مباشرة، أو يُستخرج من الطلب).
+
+### ⚠️ تصحيح مهم (المرحلة 4): الشكل الصحيح لـ payload الخاص بـ `post-sale` تغيّر عن الموثّق أعلاه
+
+الوصف والمثال في القسم أعلاه كانوا صحيحين وقت اختبار المرحلة 3 (نسخة صنف واحد بس)، لكن الدالة **اتطورت لاحقًا في المرحلة 4** (أثناء بناء `sales.html` / `SalesClient.postSale` في `supabase-client.js`) لتدعم **فاتورة متعددة الأصناف في نفس الطلب**. هذا التحديث لم يكن موثّقًا هنا وهو سبب محتمل لأخطاء عند بناء شاشات جديدة تعتمد على الشكل القديم. تم التحقق من الشكل الحالي الفعلي مباشرة عبر استعلام SQL حي على السيرفر (`SELECT pg_get_functiondef(oid) FROM pg_proc WHERE proname = 'post_sale_transaction'`) وعبر قراءة كود `supabase/functions/post-sale/index.ts` الفعلي، بتاريخ 2026-07-24:
+
+**الشكل الصحيح الحالي للـ payload**:
+```
+POST https://ucgujtkehiihlygykegx.supabase.co/functions/v1/post-sale
+Headers: Authorization: Bearer <session_access_token>, Content-Type: application/json
+Body: {
+  company_id,
+  customer_id?,
+  agent_id?,
+  items: [ { item_id, qty, unit_cost?, unit_price? }, ... ],   // مصفوفة إلزامية، صنف واحد أو أكثر — وليس item_id/qty كحقول مفردة
+  is_credit?,
+  doc_no?
+}
+```
+
+**الشكل الصحيح الحالي للرد (نجاح)**:
+```json
+{
+  "success": true,
+  "transaction": {
+    "doc_no": "...",
+    "total_amount": 0,
+    "transaction_ids": ["..."],
+    "items": [ { "item_id": "...", "qty": 0, "remaining_stock": 0, "transaction_id": "..." } ]
+  }
+}
+```
+أي قراءة للرد **لازم تمر عبر `result.transaction.doc_no`** وليس `result.doc_no` مباشرة (نفس الأمر لـ `total_amount` وباقي الحقول).
+
+**⚠️ تنبيه مهم لأي شاشة قادمة (`post-return`, `post-payment`)**: هذا التطور لـ payload متعدد الأصناف **حصل لـ `post-sale` فقط حتى الآن**. تم التحقق مباشرة من كود `post-return/index.ts` و`post-payment/index.ts` الفعلي بنفس التاريخ (2026-07-24) وهما **لسه على الشكل القديم بحقول مفردة**، لم يتحولوا لمصفوفة `items[]`:
+- `post-return`: لسه بياخد `item_id`, `qty` كحقول مفردة مباشرة (زي ما هو موثّق في قسمه تحت) — **مش** `items[]`. لو حصل تطوير مستقبلي ليدعم مرتجع متعدد الأصناف، لازم يتحدّث هنا وقتها.
+- `post-payment`: أصلاً معندوش أي مفهوم "صنف" (`item`) من الأساس، مفيش داعي لـ `items[]` فيه إطلاقًا.
+
+**لكن نقطة الرد (response) بتنطبق على الثلاثة**: الثلاث دوال ترجع نفس الشكل المغلّف `{ success: true, transaction: {...} }` — مش حقول مفردة على المستوى الأول (زي ما كان موثّق سابقًا في أمثلة الاختبار تحت لـ `post-return` و`post-payment`، اللي كانت بتكتب `doc_no=2` أو `new_balance=150` كأنها مباشرة على مستوى الرد — الصح إنها جوه `result.transaction.doc_no` وهكذا).
 
 ### ثاني Edge Function مبنية بالكامل ومُختبرة: `post-return`
 
@@ -224,11 +262,12 @@ Body: { company_id, customer_id?, agent_id?, item_id, qty, unit_cost?, unit_pric
 1. مرتجع صحيح لـ 3 وحدات من فاتورة البيع رقم 1 (المخزون كان 90) → نجح: `doc_no=2`, `ref_doc_no=1`, `total_amount=45` → تم التحقق من قاعدة البيانات: `stock_qty` رجع لـ **93** بالضبط ✅
 2. محاولة مرتجع برقم فاتورة أصلية غير موجودة (`ref_doc_no="999"`) → رُفضت بكود `422` كما هو متوقع ✅
 
-**كيفية استدعاء الدالة (مرجع سريع)**:
+**كيفية استدعاء الدالة (مرجع سريع)** — الشكل ده لسه صحيح حاليًا (`item_id`/`qty` مفردين، مش `items[]`، راجع التصحيح في قسم `post-sale` أعلاه):
 ```
 POST https://ucgujtkehiihlygykegx.supabase.co/functions/v1/post-return
 Body: { company_id, customer_id?, agent_id?, item_id, qty, unit_cost?, unit_price?, is_credit?, ref_doc_no (مطلوب) }
 ```
+**الرد**: `{ success: true, transaction: { doc_no, ref_doc_no, total_amount, ... } }` — القيم جوه `transaction`، مش على المستوى الأول مباشرة (مثال الاختبار تحت مكتوب مختصرًا `doc_no=2` لكن المقصود `transaction.doc_no`).
 
 ### ثالث Edge Function مبنية بالكامل ومُختبرة: `post-payment`
 
@@ -240,11 +279,12 @@ Body: { company_id, customer_id?, agent_id?, item_id, qty, unit_cost?, unit_pric
 
 **الاختبار الفعلي**: عميل تجريبي (`CUST001`) برصيد ابتدائي 200 → دفعة 50 → نجحت: `doc_no=3`, `new_balance=150` → تم التحقق من قاعدة البيانات مباشرة وتطابقت القيمة. ✅
 
-**كيفية الاستدعاء (مرجع سريع)**:
+**كيفية الاستدعاء (مرجع سريع)** — الشكل ده صحيح حاليًا (لا يوجد `items` أصلاً لعدم وجود مفهوم صنف هنا):
 ```
 POST https://ucgujtkehiihlygykegx.supabase.co/functions/v1/post-payment
 Body: { company_id, customer_id (مطلوب), agent_id?, amount (مطلوب، > 0) }
 ```
+**الرد**: `{ success: true, transaction: { doc_no, new_balance, ... } }` — القيم جوه `transaction`، مش على المستوى الأول مباشرة (مثال الاختبار تحت مكتوب مختصرًا `doc_no=3` لكن المقصود `transaction.doc_no`).
 
 ---
 
@@ -275,14 +315,126 @@ Body: { company_id, customer_id (مطلوب), agent_id?, amount (مطلوب، > 
 
 ---
 
-## الخطوة الجاية (لم تبدأ بعد): المرحلة 4 — الواجهة الأمامية
+## المرحلة 4 — بدأت 🔶
 
-**قبل البدء في المرحلة 4، يجب التأكد من**:
+### أول اختبار Auth end-to-end من كود فرونت إند حقيقي — نجح بالكامل
+
+**الملفات**:
+- `D:\erp-system-main\supabase-client.js` — أول نسخة من طبقة الاتصال بـ Supabase من الواجهة الأمامية (`AuthClientV2`)، بتستخدم `@supabase/supabase-js@2` عبر CDN مباشرة (`window.supabase.createClient`)
+- `D:\erp-system-main\test-auth.html` — صفحة اختبار مستقلة (RTL) بفورمين بسيطين (تسجيل / دخول) وزرار لجلب بيانات الشركة، بتستدعي `AuthClientV2` وتعرض النتيجة الخام (`JSON.stringify`) في `<pre>`
+
+**الدوال المبنية في `AuthClientV2`**:
+- `register(companyNameAr, email, password)` → `supabaseClient.auth.signUp()` مع تمرير `company_name_ar` في `options.data` (نفس الحقل اللي يقرأه الـ Trigger `handle_new_user` من المرحلة 2 عبر `raw_user_meta_data`)
+- `login(email, password)` → `supabaseClient.auth.signInWithPassword()`
+- `logout()` → `supabaseClient.auth.signOut()`
+- `getCurrentCompany()` → `supabaseClient.auth.getUser()` ثم `select('company_id, role, companies(name_ar, name_en, plan, trial_ends_at)')` من `company_users` مع `join` مباشر لجدول `companies` (PostgREST nested select)، محمي بالكامل عبر RLS من المرحلة 1 بدون أي كود سيرفر إضافي
+
+**الاختبار الفعلي (End-to-End) اللي تم فعليًا من المتصفح على `test-auth.html`، ونجح بالكامل**:
+1. **تسجيل حساب جديد** (`register`) → نجح، Trigger `handle_new_user` اشتغل تلقائي وأنشأ شركة جديدة وربط المستخدم كـ `owner` (نفس الآلية المُختبرة في المرحلة 2، بس دلوقتي من مسار تسجيل حقيقي من الواجهة مش من Dashboard يدويًا) ✅
+2. **تأكيد الإيميل** (Confirm email) → وصل فعليًا واتأكد بنجاح (إعداد `Confirm email: ON` من المرحلة 2 شغال صح مع مسار تسجيل حقيقي) ✅
+3. **تسجيل الدخول** (`login`) → نجح بعد التأكيد، ورجّع `session` صالحة ✅
+4. **جلب بيانات الشركة** (`getCurrentCompany`) → نجح، ورجّع اسم الشركة + الدور (`owner`) + بيانات الخطة (`plan`, `trial_ends_at`) عبر الـ join، مما يثبت إن RLS + العلاقة بين `company_users` و`companies` شغالة صح من طلب فرونت إند حقيقي (مش من SQL Editor أو محاكاة جلسة زي المرحلة 1) ✅
+
+**دلالة النتيجة**: هذا أول إثبات فعلي إن سلسلة كاملة — تسجيل ذاتي → Trigger إنشاء شركة → تأكيد إيميل → تسجيل دخول → قراءة بيانات محمية بـ RLS عبر join — شغالة end-to-end من كود فرونت إند حقيقي بيستخدم الـ publishable key بس، بدون أي طبقة سيرفر وسيطة. هذا يفتح الطريق لبناء باقي `api-client.js` بنفس الاستراتيجية (نفس أسماء الدوال القديمة، تواصل مباشر مع Supabase من الداخل) زي ما هو موثّق في `خطة_الهجرة_Supabase.md` قسم "المرحلة 4".
+
+**ملاحظة**: `test-auth.html` و`supabase-client.js` ملفات اختبار/بداية أولية، ولسه المفروض تتدمج أو تتوسع لتغطي باقي احتياجات `api-client.js` الفعلي (قائمة العملاء، الأصناف، المعاملات... إلخ) قبل اعتبار المرحلة 4 مكتملة.
+
+---
+
+## المرحلة 4 — قسم المشتريات 🔶
+
+توسعة كاملة للنظام لتغطية دورة الشراء (عكس دورة البيع)، بنفس الأنماط المعمارية المثبتة سابقًا (RPC ذرية + Edge Function رقيقة + RLS). **الكود اتكتب بالكامل، لسه محتاج اختبار end-to-end فعلي** (راجع القسم الأخير تحت).
+
+### تعديلات السكيمة (تم التحقق منها مباشرة من قاعدة البيانات الحية)
+
+**جدول جديد**: `suppliers` (الموردين) — RLS مفعّل (`rowsecurity = true`، تم التأكيد مباشرة):
+
+| العمود | النوع | ملاحظة |
+|---|---|---|
+| `id` | uuid | `gen_random_uuid()` |
+| `company_id` | uuid | عزل multi-tenant، نفس نمط باقي الجداول |
+| `code` | text | |
+| `name` | text | |
+| `phone` | text | |
+| `address` | text | |
+| `tax_number` | text | اختياري |
+| `balance` | numeric | افتراضي `0` — رصيد المورد (له، Accounts Payable) |
+| `created_at` | timestamptz | `now()` |
+
+**توسعة `companies`**: أعمدة جديدة `currency` (text), `tax_number` (text), `cr_number` (text) — بيانات هوية/ضريبية إضافية للشركة (السجل التجاري والرقم الضريبي والعملة)، منفصلة عن `company_settings` لأنها بيانات هوية شبه ثابتة مش إعدادات متغيرة.
+
+**توسعة `items`**: عمود جديد `tax_rate` (numeric) — نسبة الضريبة الافتراضية للصنف.
+
+**توسعة `transactions`**: أعمدة جديدة `supplier_id` (uuid)، `tax_rate` (numeric)، `tax_amount` (numeric) — لدعم ربط معاملة الشراء بالمورد وتسجيل تفاصيل الضريبة لكل سطر معاملة.
+
+### دالة `post_purchase_transaction` (RPC) ومنطقها
+
+**الاسم**: `post_purchase_transaction(p_company_id uuid, p_supplier_id uuid, p_items jsonb, p_is_credit boolean, p_doc_no text)` — `security definer`, `set search_path = 'public'`.
+
+**الفرق الجوهري عن `post_sale_transaction`**:
+- **الشراء مسموح دايمًا بدون فحص كفاية مخزون** (عكس البيع تمامًا) — منطقيًا مفيش حد أعلى منطقي لكمية الشراء، فمفيش داعي لرفض العملية.
+- **تحديث `unit_cost` تلقائيًا لآخر سعر شراء**: كل عملية شراء لصنف بتحدّث `items.unit_cost` لأحدث سعر تكلفة مُدخل (`coalesce(v_unit_cost, unit_cost)`)، وده قرار عمل متعمد إن سعر التكلفة المعروض للصنف يعكس آخر سعر شراء فعلي، مش متوسط تكلفة مرجّح (FIFO/Weighted Average لسه مش مطبّق).
+- **زيادة المخزون** (`stock_qty = stock_qty + qty`) بدل تقليله.
+- **دعم ضريبة لكل سطر صنف** (`tax_rate` اختياري لكل صنف في `items[]`، افتراضي `0`) — بيتحسب منها `tax_amount` لكل سطر، ويتجمّع في `v_grand_tax` على مستوى الفاتورة كاملة.
+- **اتجاه رصيد المورد عند شراء بالآجل** (`is_credit = true`): رصيد المورد **يزيد** بإجمالي الفاتورة شامل الضريبة (`v_grand_total + v_grand_tax`) — الشركة مديونة للمورد (Accounts Payable)، عكس اتجاه رصيد العميل في البيع.
+- **قفل الصف** (`for update`) على الصنف وقت التحديث، بنفس منطق منع Race Condition من `post_sale_transaction`.
+- **الترقيم**: نفس تسلسل `last_doc_number` لكل شركة (مشترك مع البيع/المرتجع/الدفعة، وليس تسلسل منفصل للمشتريات).
+
+**شكل الرد (نجاح)** — لاحظ حقل إضافي `grand_total` (شامل الضريبة) غير موجود في رد `post-sale`:
+```json
+{
+  "success": true,
+  "transaction": {
+    "doc_no": "...",
+    "total_amount": 0,
+    "tax_amount": 0,
+    "grand_total": 0,
+    "transaction_ids": ["..."],
+    "items": [ { "item_id": "...", "qty": 0, "transaction_id": "..." } ]
+  }
+}
+```
+
+### Edge Function: `post-purchase`
+
+**الموقع**: `D:\erp-system-main\supabase\functions\post-purchase\index.ts`
+
+بنفس النمط الرقيق المعتاد: تحقق من `company_id` و`items[]`، تحقق من `company_can_write` (نفس فحص `plan`/`trial_ends_at`)، ثم استدعاء `post_purchase_transaction` عبر `.rpc()`. المدخلات: `{ company_id, supplier_id?, items: [{item_id, qty, unit_cost?, tax_rate?}], is_credit?, doc_no? }` — نفس نمط `items[]` الصحيح المستخدم في `post-sale` الحالي (راجع تصحيح المرحلة 4 السابق في هذا الملف)، **وليس** حقول مفردة.
+
+**⚠️ نفس ملاحظة `actor` غير المكتملة**: مسجّل حاليًا بقيمة ثابتة `'system'` في `audit_log`، بنفس الوضع في باقي الدوال.
+
+### واجهة أمامية: `suppliers.html` و`purchases.html`
+
+- **`suppliers.html`**: صفحة CRUD بسيطة للموردين (إضافة + عرض قائمة)، بنفس نمط `items.html`/`customers.html` بالظبط. بتستخدم `SuppliersClient.list()` و`SuppliersClient.create()` الجديدين في `supabase-client.js`.
+- **`purchases.html`**: فورم تسجيل عملية شراء — قوائم منسدلة للمورد والصنف (بتتحمّل من `SuppliersClient.list()` و`ItemsClient.list()` معًا عبر `Promise.all`)، حقول كمية/سعر تكلفة/نسبة ضريبة/شراء بالآجل، وبتستدعي `PurchasesClient.postPurchase()` الجديد (بنفس نمط `SalesClient.postSale`: بتجيب `session.access_token` وتبعته كـ `Bearer` للـ Edge Function مباشرة، مش عبر PostgREST).
+- تمت إضافة روابط `suppliers.html` و`purchases.html` في شريط التنقل (`app-nav`) في كل صفحات الواجهة الحالية.
+
+### الحالة الحالية: الكود مكتمل، الاختبار الفعلي لسه ناقص ⏳
+
+**تم التحقق منه بالفعل** (عبر استعلامات SQL مباشرة على القاعدة الحية بتاريخ 2026-07-24، مش افتراضًا):
+- الأعمدة الجديدة على `companies`, `items`, `transactions` موجودة فعليًا بالأنواع الصحيحة
+- جدول `suppliers` موجود وRLS مفعّل عليه
+- تعريف دالة `post_purchase_transaction` منشور فعليًا ومطابق للمنطق الموصوف أعلاه
+
+**لسه محتاج اختبار end-to-end فعلي من المتصفح** (بنفس منهجية اختبار Auth السابق في هذا الملف — نتيجة حقيقية من قاعدة البيانات، مش افتراض نظري):
+1. تسجيل دخول (`test-auth.html` أو الجلسة الحالية)
+2. إضافة مورد جديد من `suppliers.html`
+3. تسجيل عملية شراء من `purchases.html` لصنف موجود
+4. التأكد المباشر من قاعدة البيانات إن: `items.stock_qty` زاد بمقدار الكمية المشتراة، و`items.unit_cost` اتحدّث لو اتغيّر، و(لو شراء بالآجل) `suppliers.balance` زاد بالإجمالي شامل الضريبة، وصف جديد اتسجل في `transactions` بـ `type='purchase'` وربط صحيح بـ `supplier_id`
+
+**لا يُعتبر قسم المشتريات مكتملًا رسميًا قبل تنفيذ الاختبار الفعلي أعلاه والتأكد من نتائجه، بنفس معيار الصرامة المتبع في كل مراحل هذا المشروع.**
+
+---
+
+## الخطوة الجاية: استكمال المرحلة 4 — باقي الواجهة الأمامية
+
+**قبل الاستكمال، يجب التأكد من**:
 1. هل الملف ده (`SUPABASE_MIGRATION_LOG.md`) اتضاف فعليًا للريبو على GitHub؟ (لم يُؤكد بعد وقت كتابة هذا التحديث — كل الملفات لسه بس على جهاز المستخدم محليًا وعلى claude.ai، لم تُدفع (push) للريبو البعيد بعد)
 2. هل فيه أي تعديل حصل على السكيمة أو الدوال أو Edge Functions من وقت كتابة هذا الملف؟
 3. اقرأ `خطة_الهجرة_Supabase.md` قسم "المرحلة 4" قبل أي تنفيذ — الاستراتيجية المقترحة هناك: بناء `api-client.js` جديد بنفس أسماء الدوال القديمة بالضبط، لكنه يتواصل مع Supabase من الداخل، لتقليل التعديلات المطلوبة في باقي ملفات `modules/`.
 4. نظام الدفع الفعلي لسه غير محدد — الآلية الحالية (قفل جزئي تلقائي بعد 14 يوم) مصممة لتستقبل أي نظام دفع مستقبلي بتحديث عمود `plan` فقط، دون تعديل جوهري.
-5. **ملف واحد لسه ناقص توثيقه هنا**: هل تم `git push` لأي من ملفات `supabase/` (السكيمة، الدوال) للريبو البعيد على GitHub؟ يُنصح بعمل ذلك قبل الانتقال للمرحلة 4 لتجنب فقد العمل لو حصل أي عطل في الجهاز المحلي.
+5. ✅ **تم**: كل ملفات `supabase/` (السكيمة، config، الثلاث Edge Functions) تم رفعها فعليًا للريبو البعيد على GitHub عبر `git push` (commit: `1176da0`). المجلد المحلي `D:\erp-system-main` كان في الأصل تحميل ZIP وليس `git clone` حقيقي — تم تحويله لريبو Git فعلي عبر `git init` + `git remote add origin` + `git fetch` + `git reset --mixed origin/main` قبل الرفع، لضمان عدم فقد أو تعارض مع أي محتوى موجود على GitHub مسبقًا. كذلك تم تثبيت Git نفسه على الجهاز (لم يكن مثبتًا من الأساس) وتسجيل هوية Git المحلية (`user.name`/`user.email`) لأول مرة.
+6. **ملاحظة بسيطة غير حرجة**: مجلد `supabase/.temp/` (معلومات اتصال مؤقتة غير حساسة) اترفع مع باقي الملفات لعدم وجود `.gitignore` مضبوط بعد. يُفضّل إضافة `.gitignore` مناسب لمجلد `supabase/` مستقبلاً، لكن هذا غير عاجل ولا يمثل خطورة أمنية.
 
 ---
 

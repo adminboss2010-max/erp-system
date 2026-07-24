@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>العملاء</title>
+<link rel="stylesheet" href="design-system.css">
+<style>
+  body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+  table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; }
+  th, td { padding: 10px; border: 1px solid #ddd; text-align: right; }
+  th { background: #2c3e50; color: white; }
+  .form-box { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+  input { padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
+  button { padding: 8px 16px; background: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+  .error { color: red; }
+</style>
+</head>
+<body>
+<header class="app-header">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="27" y="52" width="10" height="24" rx="2.5" fill="#b8932f"/>
+        <rect x="41" y="42" width="10" height="34" rx="2.5" fill="#b8932f"/>
+        <rect x="55" y="30" width="10" height="46" rx="2.5" fill="#b8932f"/>
+        <rect x="69" y="18" width="10" height="58" rx="2.5" fill="#d9bc8c"/>
+      </svg>
+    </div>
+    <div class="brand-name">prova<small>UNIFIED ERP SYSTEM</small></div>
+  </div>
+</header>
+<nav class="app-nav">
+  <a href="customers.html">العملاء</a>
+  <a href="agents.html">المناديب</a>
+</nav>
+<div class="page-container">
+<h2>👥 العملاء</h2>
+
+<div class="form-box">
+  <h3>إضافة عميل جديد</h3>
+  <input id="custCode" placeholder="الكود">
+  <input id="custName" placeholder="الاسم">
+  <input id="custPhone" placeholder="التليفون">
+  <input id="custAddress" placeholder="العنوان">
+  <button onclick="addCustomer()">إضافة</button>
+  <div id="formMsg"></div>
+</div>
+
+<table>
+  <thead>
+    <tr><th>الكود</th><th>الاسم</th><th>التليفون</th><th>العنوان</th><th>الرصيد</th></tr>
+  </thead>
+  <tbody id="custTableBody"></tbody>
+</table>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script>
+  let currentCompanyId = null;
+
+  async function init() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      alert('لازم تسجل دخول الأول من test-auth.html');
+      return;
+    }
+    const companyInfo = await AuthClientV2.getCurrentCompany();
+    if (!companyInfo.ok) {
+      alert('خطأ فى جلب بيانات الشركة: ' + companyInfo.error);
+      return;
+    }
+    currentCompanyId = companyInfo.company_id;
+    loadCustomers();
+  }
+
+  async function loadCustomers() {
+    const result = await CustomersClient.list(currentCompanyId);
+    const tbody = document.getElementById('custTableBody');
+    if (!result.ok) {
+      tbody.innerHTML = `<tr><td colspan="5" class="error">${result.error}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = result.customers.map(c => `
+      <tr>
+        <td>${c.code || ''}</td>
+        <td>${c.name || ''}</td>
+        <td>${c.phone || ''}</td>
+        <td>${c.address || ''}</td>
+        <td>${c.balance || 0}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="5">لا يوجد عملاء بعد</td></tr>';
+  }
+
+  async function addCustomer() {
+    const customer = {
+      code: document.getElementById('custCode').value,
+      name: document.getElementById('custName').value,
+      phone: document.getElementById('custPhone').value,
+      address: document.getElementById('custAddress').value,
+    };
+    if (!customer.name) {
+      document.getElementById('formMsg').innerHTML = '<span class="error">اسم العميل مطلوب</span>';
+      return;
+    }
+    const result = await CustomersClient.create(currentCompanyId, customer);
+    if (!result.ok) {
+      document.getElementById('formMsg').innerHTML = `<span class="error">${result.error}</span>`;
+      return;
+    }
+    document.getElementById('formMsg').innerHTML = '✅ تم الإضافة';
+    document.getElementById('custCode').value = '';
+    document.getElementById('custName').value = '';
+    document.getElementById('custPhone').value = '';
+    document.getElementById('custAddress').value = '';
+    loadCustomers();
+  }
+
+  init();
+</script>
+</body>
+</html>
