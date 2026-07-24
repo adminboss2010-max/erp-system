@@ -515,6 +515,69 @@ FROM trial_balance GROUP BY company_id;
 
 ---
 
+## نظام المخزون الاحترافي ✅
+
+توسعة كاملة لإدارة المخزون فوق ما بُني في المراحل السابقة — تعدد مخازن، تصنيف أصناف هرمي، بيانات صنف كاملة، وسجل حركة مخزون تفصيلي (Stock Ledger) لكل حركة بدل الاكتفاء برقم `stock_qty` النهائي فقط. كل الأرقام والتعريفات تحت تم التحقق منها مباشرة من قاعدة البيانات الحية بتاريخ 2026-07-24.
+
+### الجداول الجديدة
+
+**`warehouses`** (المخازن): `id`, `company_id`, `code`, `name`, `is_default` (افتراضي `false`), `is_active` (افتراضي `true`), `created_at`. RLS مفعّل.
+
+**مخزن افتراضي تلقائي لكل شركة جديدة**: دالة `handle_new_user` (نفس الـ Trigger من المرحلة 2، بعد `seed_default_chart_of_accounts`) بقت كمان تنفّذ:
+```sql
+insert into public.warehouses (company_id, code, name, is_default)
+values (new_company_id, 'MAIN', 'المخزن الرئيسي', true);
+```
+فأي شركة جديدة بتاخد مخزن رئيسي جاهز (`MAIN`) من غير أي خطوة يدوية، بنفس فلسفة دليل الحسابات الافتراضي.
+
+**`item_categories`** (تصنيفات الأصناف): `id`, `company_id`, `name`, `parent_id` (لدعم تصنيفات فرعية هرمية)، `created_at`. RLS مفعّل.
+
+**توسعة `items`** بأعمدة جديدة لبيانات صنف كاملة: `category_id` (uuid → `item_categories`)، `barcode` (text)، `unit` (text, افتراضي `'قطعة'`)، `brand` (text)، `description` (text)، `image_url` (text)، `min_stock_level` (numeric, افتراضي `0`)، `max_stock_level` (numeric)، `is_active` (boolean, افتراضي `true`)، `item_type` (text, افتراضي `'product'`)، `default_warehouse_id` (uuid → `warehouses`).
+
+**`stock_movements`** (سجل حركة المخزون التفصيلي): `id`, `company_id`, `item_id`, `warehouse_id`, `movement_type` (نص حر: `sale_out`, `purchase_in`, `adjustment_in`, `adjustment_out`, `write_off`, ...)، `qty`, `unit_cost`, `reference_doc_no`, `reference_transaction_id` (uuid → `transactions`)، `notes`, `created_at`, `created_by`.
+
+**⚠️ قرار أمان متعمد ومُتحقق منه فعليًا**: جدول `stock_movements` RLS مفعّل عليه بس بسياسة **قراءة فقط** (`sm_select` باستخدام `is_company_member(company_id)`، أمر `select` حصرًا). **لا توجد أي سياسة `insert`/`update`/`delete` على الإطلاق** — تم التأكد من ده مباشرة عبر `pg_policy`. يعني حتى لو استُخدم مفتاح المستخدم العادي (مش `service_role`)، محدش يقدر يسجّل حركة مخزون مباشرة من الواجهة أو PostgREST؛ الكتابة الوحيدة الممكنة هي عبر دوال `security definer` (`post_sale_transaction`, `post_purchase_transaction`, `adjust_stock`, `write_off_stock`) اللي بتتحكم في صحة البيانات المُدرجة. ده يمنع أي تلاعب مباشر في سجل الحركة من كود فرونت إند أو نداء API عشوائي.
+
+### دالتا التصحيح اليدوي: `adjust_stock` و`write_off_stock`
+
+**`adjust_stock(p_company_id uuid, p_item_id uuid, p_new_qty numeric, p_reason text)`** — تصحيح جرد (Stock Count Adjustment): بتاخد الكمية **الفعلية الجديدة** (مش الفرق) وتقارنها بـ `stock_qty` الحالي:
+- لو الفرق `= 0` بترجع من غير أي تعديل.
+- لو فيه فرق: بتحدّث `items.stock_qty` مباشرة، وتسجّل حركة `adjustment_in` (لو زيادة) أو `adjustment_out` (لو نقص) في `stock_movements`.
+- **قيد محاسبي تلقائي** لو قيمة الفرق (`|diff| × unit_cost`) أكبر من صفر: زيادة جرد → مدين `1200` (المخزون) / دائن `5100` (فرق جرد)؛ عجز جرد → مدين `5100` (خسارة عجز) / دائن `1200` (تخفيض المخزون).
+
+**`write_off_stock(p_company_id uuid, p_item_id uuid, p_qty numeric, p_reason text)`** — إتلاف مخزون (تلف، انتهاء صلاحية، إلخ): بترفض العملية لو الكمية المطلوب إتلافها أكبر من المتاح فعليًا (`raise exception`)، وإلا بتقلل `stock_qty`، تسجّل حركة `write_off`، وتنشئ **قيد محاسبي إلزامي** (مش شرطي زي `adjust_stock`): مدين `5100` (خسارة إتلاف) / دائن `1200` (تخفيض المخزون).
+
+كلتا الدالتين `security definer`، وبتستخدما `for update` على صف الصنف لمنع Race Condition، وبتولّدا رقم مستند جديد من نفس تسلسل `last_doc_number` لكل شركة.
+
+### الربط مع `post_sale_transaction` و`post_purchase_transaction`
+
+الدالتان اتعدّلتا (فوق منطق البيع/الشراء والقيود المحاسبية الموجودة من قبل) عشان تسجّلا حركة مخزون تفصيلية لكل سطر صنف، **قبل** إنشاء القيد المحاسبي وبعد إدراج صف `transactions` مباشرة، في نفس المعاملة الذرية:
+```sql
+-- post_sale_transaction (لكل صنف فى الفاتورة)
+insert into stock_movements (company_id, item_id, movement_type, qty, unit_cost, reference_doc_no, reference_transaction_id)
+values (p_company_id, v_item_id, 'sale_out', v_qty, v_unit_cost, v_generated_doc_no, v_new_transaction_id);
+
+-- post_purchase_transaction (لكل صنف فى الفاتورة)
+insert into stock_movements (company_id, item_id, movement_type, qty, unit_cost, reference_doc_no, reference_transaction_id)
+values (p_company_id, v_item_id, 'purchase_in', v_qty, v_unit_cost, v_generated_doc_no, v_new_transaction_id);
+```
+بكده أي عملية بيع أو شراء بقت بتترك أثر مزدوج: قيد محاسبي (`journal_entries`) + حركة مخزون تفصيلية (`stock_movements`)، وكلاهما مربوط بنفس `reference_doc_no`/`reference_transaction_id` للتتبع الكامل.
+
+### الاختبار الفعلي — end-to-end، والميزان لسه متوازن بعد كل التعديلات ✅
+
+**تم التحقق مباشرة من `stock_movements`**: حركتان فعليتان من نوع `sale_out` مسجّلتان لنفس الصنف (`item_id = ff0ea548-...`)، مرتبطتان بفاتورتي بيع حقيقيتين (`reference_doc_no = 5` و`6`, كل واحدة `qty = 10`, `unit_cost = 1`) — مش بيانات وهمية أو Placeholder.
+
+**تم التحقق مباشرة من `trial_balance` بعد كل التعديلات دي** (توسعة السكيمة + تعديل الدالتين + إضافة `adjust_stock`/`write_off_stock`):
+```sql
+SELECT company_id, sum(total_debit), sum(total_credit), sum(total_debit) - sum(total_credit) AS difference
+FROM trial_balance GROUP BY company_id;
+```
+**النتيجة**: لشركة الاختبار النشطة — `total_debit = 102.5`, `total_credit = 102.5`, **`difference = 0`** ✅ (ارتفعت من `52.5` السابقة بعد عمليات بيع إضافية، والميزان فضل متوازن تمامًا رغم كل التوسعات الجديدة في السكيمة والمنطق).
+
+**دلالة النتيجة**: توسعة نظام المخزون (مخازن، تصنيفات، بيانات صنف، سجل حركة، تصحيح جرد، إتلاف) اتضافت **من غير ما تكسر** أي من ضمانات الذرية أو توازن القيد المزدوج المُثبتة سابقًا في نظام المحاسبة — كل حركة مخزون وكل قيد محاسبي ارتبطا صح ببعض ومع المعاملات التجارية الأصلية، وتم التحقق من النتيجتين مباشرة من قاعدة البيانات، مش افتراضًا نظريًا.
+
+---
+
 ## الخطوة الجاية: استكمال المرحلة 4 — باقي الواجهة الأمامية
 
 **قبل الاستكمال، يجب التأكد من**:
