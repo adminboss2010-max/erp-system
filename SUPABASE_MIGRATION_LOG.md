@@ -814,3 +814,96 @@ supabase db query --file <filename>.sql --linked
 ## ملاحظة تشغيلية مهمة
 
 كل خطوات هذه المرحلة اتنفذت يدويًا عبر واجهة Supabase Dashboard مباشرة (SQL Editor + Authentication) من متصفح المستخدم، **مش عبر أدوات MCP** (لأن الجلسة كانت على claude.ai في المتصفح، وأدوات MCP الموصوفة في `README_MCP_Project.md` تعمل فقط داخل Claude Code). لو حبيت تكمل عبر MCP لاحقًا، لازم تضاف أداة MCP جديدة للتعامل مع Supabase (مش موجودة حاليًا في السيرفر المحلي `D:\erp-mcp-server` — الأدوات الحالية بتاعته لـ GitHub و Google Sheets بس).
+
+---
+
+## هجرة نظام "غروب النايف" — 15 وحدة جديدة مكتملة ✅ (بتاريخ 2026-08-07)
+
+توسعة ضخمة للنظام المحاسبي، منفَّذة بالكامل عبر `migration_alnaif/` بنفس أسلوب `db query --file` الموثّق فوق، بالترتيب الإلزامي المحدد فى `migration_alnaif/00_دليل_التنفيذ_الكامل.md` (كل ملف بعد اعتمادياته، مش عشوائي). الـ 15 ملف اتنفذوا بدون أي error، كل واحد اتأكد بعده مباشرة بـ `rows: []` نظيفة قبل الانتقال للتالي.
+
+### الوحدات الـ 15 (بالترتيب)
+
+| # | الملف | الوحدة |
+|---|---|---|
+| 1 | `full_chart_of_accounts.sql` | دليل حسابات كويتي كامل (289 حساب) |
+| 2 | `extend_core_entities.sql` | توسعة عملاء/أصناف/مناديب |
+| 3 | `fixed_assets_module.sql` | أصول ثابتة + إهلاك IAS 16 |
+| 4 | `bank_reconciliation_module.sql` | تسوية بنكية IAS 7 |
+| 5 | `tax_module.sql` | زكاة شرعية + KFAS + NLSC |
+| 6 | `hr_payroll_module.sql` | رواتب وموارد بشرية بقانون العمل الكويتي، شامل مكافأة نهاية خدمة |
+| 7 | `procurement_module.sql` | مشتريات ومطابقة ثلاثية (PO/GR/VI) |
+| 8 | `budget_module.sql` | موازنة تقديرية بسيناريوهات |
+| 9 | `commission_branch_credit_module.sql` | عمولات مناديب + فروع + إدارة ائتمان وأعمار ذمم |
+| 10 | `quotations_fx_module.sql` | عروض أسعار قابلة للتحويل لفواتير + عملات أجنبية وإعادة تقييم |
+| 11 | `inventory_valuation_stdcost_module.sql` | تصحيح تقييم مخزون بالمتوسط المرجح (IAS 2) + تكلفة معيارية |
+| 12 | `batch_suppliers_module.sql` | تتبع دفعات صلاحية + توسعة موردين |
+| 13 | `workflow_module.sql` | سير عمل موافقات متعددة المستويات |
+| 14 | `docs_api_stores_module.sql` | مستندات + مفاتيح API + مخازن فروع |
+| 15 | `analytics_mobile_email_whatsapp_module.sql` | تحليلات CLV + زيارات ميدانية + جدولة تقارير + واتساب |
+
+### تصحيح `post_purchase_transaction`: متوسط مرجح حقيقي بدل "آخر سعر شراء" (IAS 2)
+
+ملف رقم 11 أنشأ دالة `weighted_average_cost()` لكن **لم يعدّل** `post_purchase_transaction` الموجودة فعليًا (تعمّدًا، تجنبًا لكسرها تلقائيًا — التعديل موثّق كتعليق داخل الملف نفسه لتطبيقه يدويًا). تم تطبيق التعديل يدويًا بعدها عبر ملف منفصل (`migration_alnaif/fix_post_purchase_weighted_avg.sql`، أُنشئ لهذا الغرض تحديدًا): استبدال السطر الوحيد التالي فى جسم الدالة (باقي الدالة **بدون أي تغيير**):
+
+```sql
+-- كان (آخر سعر شراء مباشر):
+update items set stock_qty = stock_qty + v_base_qty,
+  unit_cost = coalesce(v_unit_cost / nullif(v_unit_factor, 0), unit_cost)
+where id = v_item_id and company_id = p_company_id;
+
+-- بقى (متوسط مرجح حقيقي):
+update items set
+  unit_cost = weighted_average_cost(stock_qty, unit_cost, v_base_qty, v_unit_cost / nullif(v_unit_factor,0)),
+  stock_qty = stock_qty + v_base_qty
+where id = v_item_id and company_id = p_company_id;
+```
+
+**التحقق الفعلي**: بعد التنفيذ، `pg_get_functiondef(oid)` أعاد تعريف الدالة الحية وأكد وجود `weighted_average_cost` واختفاء `coalesce` القديمة تمامًا.
+
+**اختبار رياضي فعلي على القاعدة الحية**: صنف "حسام" (شركة "شركة اختبار Auth") كان برصيد `31` وحدة بسعر `1.000`. بعد شراء `10` وحدات بسعر `2.000`: `(31×1.000 + 10×2.000) / (31+10) = 51/41 = 1.2439`. تم التحقق مباشرة من `items`: `stock_qty = 41`, `unit_cost = 1.2439` — مطابق تمامًا للحساب اليدوي. ✅
+
+### دوال التأسيس — نُفذت لشركة الاختبار "شركة تجربة MCP" (`4364d955-c010-4b20-bf10-71597509ef2f`)
+
+```sql
+select seed_full_kuwaiti_chart('4364d955-c010-4b20-bf10-71597509ef2f');
+select seed_default_asset_categories('4364d955-c010-4b20-bf10-71597509ef2f');
+select seed_default_tax_settings('4364d955-c010-4b20-bf10-71597509ef2f');
+select seed_default_hr_settings('4364d955-c010-4b20-bf10-71597509ef2f');
+select seed_head_office_branch('4364d955-c010-4b20-bf10-71597509ef2f');
+select seed_default_commission_rules('4364d955-c010-4b20-bf10-71597509ef2f');
+select seed_default_quotation_templates('4364d955-c010-4b20-bf10-71597509ef2f');
+select seed_default_fx_rates('4364d955-c010-4b20-bf10-71597509ef2f');
+select seed_default_workflow_templates('4364d955-c010-4b20-bf10-71597509ef2f');
+```
+
+**التحقق الفعلي (عدّ صفوف مباشر بعد التنفيذ، مش افتراض)**:
+
+| الجدول | العدد قبل | العدد بعد |
+|---|---|---|
+| `chart_of_accounts` | 12 (القديم فقط) | **301** (12 قديم + 289 من `seed_full_kuwaiti_chart`) |
+| `asset_categories` | 0 | 5 |
+| `tax_settings` | 0 | 1 |
+| `hr_settings` | 0 | 1 |
+| `branches` | 0 | 1 |
+| `commission_rules` | 0 | 1 |
+| `quotation_templates` | 0 | 3 |
+| `fx_rates` | 0 | 7 |
+| `workflow_templates` | 0 | 2 |
+
+### الميزان المحاسبي (Trial Balance) — متوازن بعد كل التوسعة
+
+تم فحص `trial_balance` (view) مباشرة بعد اكتمال كل الوحدات الـ 15 + التصحيح اليدوي + التأسيس، على الشركات الثلاث الموجودة فعليًا:
+
+| الشركة | إجمالي مدين | إجمالي دائن | الفرق |
+|---|---|---|---|
+| شركة تجربة MCP | 30.000 | 30.000 | **0.000** ✅ |
+| شركة اختبار Auth | 11360.001 | 11360.001 | **0.000** ✅ |
+| شركة جديدة | 0 | 0 | **0.000** ✅ |
+
+### النطاقات غير المُنفَّذة عمدًا
+
+حسب دليل التنفيذ، 4 نطاقات استُبعدت بقرار واعٍ (مش نسيان): Theme (إعداد واجهة بحت)، Test (أداة تطوير داخلية)، MRP (تخطيط إنتاج مصانع، لا ينطبق على نشاط تجاري/توزيع)، Portal (بوابة عملاء ذاتية، مشروع واجهة منفصل).
+
+### الخطوة الجاية
+
+اختبار end-to-end حقيقي لكل وحدة جديدة (سند صرف موظف، أمر شراء → استلام → فاتورة مورد → مطابقة ثلاثية، تشغيل رواتب شهر كامل، احتساب زكاة فعلي)، بنفس منهجية التحقق المباشر من القاعدة المتبعة طول هذا الملف — لسه لم يبدأ.
