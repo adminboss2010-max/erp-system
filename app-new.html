@@ -6,19 +6,32 @@
 <link rel="stylesheet" href="design-system.css">
 <style>
   .app-shell{ display:flex; min-height:calc(100vh - 60px) }
-  .sidebar{ width:230px; background:var(--navy-0); padding:14px 0; flex-shrink:0 }
-  .sidebar-group-title{
-    font-size:10.5px; font-weight:700; color:var(--gold-3); opacity:0.65;
-    letter-spacing:1px; padding:18px 20px 6px; text-transform:uppercase;
+  .sidebar{ width:250px; background:var(--navy-0); padding:10px 0; flex-shrink:0; overflow-y:auto; max-height:calc(100vh - 60px) }
+  .side-group{ margin-bottom:2px }
+  .side-mod{
+    display:flex; align-items:center; gap:10px; padding:11px 16px; cursor:pointer;
+    font-size:12.5px; font-weight:700; color:var(--gold-3); user-select:none;
+    transition:background .15s;
   }
+  .side-mod:hover{ background:rgba(255,255,255,0.04) }
+  .side-mod.on{ color:var(--gold-4) }
+  .side-mod-ico{ width:16px; text-align:center }
+  .side-mod-lbl{ flex:1 }
+  .side-caret{ font-size:10px; transition:transform .2s; opacity:0.6 }
+  .side-mod.open .side-caret{ transform:rotate(180deg) }
+  .side-items{ max-height:0; overflow:hidden; transition:max-height .25s ease }
+  .side-items.open{ max-height:900px }
   .sidebar-link{
-    display:flex; align-items:center; gap:10px; padding:9px 20px; color:#c8d0de;
-    font-size:13px; font-weight:600; text-decoration:none; cursor:pointer;
+    display:flex; align-items:center; gap:10px; padding:8px 16px 8px 12px; color:#c8d0de;
+    font-size:12.5px; font-weight:600; text-decoration:none; cursor:pointer;
     border-right:3px solid transparent; transition:all .15s;
   }
-  .sidebar-link .ic{ width:16px; text-align:center; opacity:0.85 }
+  .sidebar-link .ic{ width:16px; text-align:center; opacity:0.85; flex-shrink:0 }
   .sidebar-link:hover{ background:rgba(255,255,255,0.05); color:#fff }
   .sidebar-link.active{ background:rgba(217,188,140,0.12); color:var(--gold-4); border-right-color:var(--gold-2) }
+  .sidebar-link.soon{ opacity:0.45; cursor:default }
+  .sidebar-link.soon:hover{ background:transparent; color:#c8d0de }
+  .soon-tag{ font-size:9px; background:rgba(255,255,255,0.08); padding:1px 6px; border-radius:8px; margin-right:auto }
   .main-content{ flex:1; padding:26px 30px; overflow-x:auto }
 
   .view-fade{ animation:fadeIn .25s ease }
@@ -191,46 +204,102 @@
 </header>
 
 <div class="app-shell">
-  <nav class="sidebar">
-    <div class="sidebar-group-title">الملخص</div>
-    <a class="sidebar-link" data-view="dashboard" onclick="switchView('dashboard')"><span class="ic">📊</span> نظرة عامة</a>
+  <nav class="sidebar" id="sidebarNav">
 
-    <div class="sidebar-group-title">🗂️ البيانات الأساسية</div>
-    <a class="sidebar-link" data-view="customers" onclick="switchView('customers')"><span class="ic">👥</span> العملاء</a>
-    <a class="sidebar-link" data-view="agents" onclick="switchView('agents')"><span class="ic">🧑‍💼</span> المناديب</a>
-    <a class="sidebar-link" data-view="items" onclick="switchView('items')"><span class="ic">📦</span> الأصناف</a>
-    <a class="sidebar-link" data-view="suppliers" onclick="switchView('suppliers')"><span class="ic">🚚</span> الموردين</a>
+    <!-- ════════ 1) الرئيسية والقيادة ════════ -->
+    <div class="side-group">
+      <div class="side-mod open on" data-mod="home" onclick="toggleMod('home')"><span class="side-mod-ico">🏠</span><span class="side-mod-lbl">الرئيسية والقيادة</span><span class="side-caret">▾</span></div>
+      <div class="side-items open" data-moditems="home">
+        <a class="sidebar-link" data-view="dashboard" onclick="switchView('dashboard')"><span class="ic">📊</span> نظرة عامة تنفيذية</a>
+        <a class="sidebar-link soon"><span class="ic">⚖️</span> المقارنة بين الفترات<span class="soon-tag">قريبًا</span></a>
+      </div>
+    </div>
 
-    <div class="sidebar-group-title">💼 العمليات</div>
-    <a class="sidebar-link" data-view="newSale" onclick="switchView('newSale')"><span class="ic">🧾</span> فاتورة مبيعات</a>
-    <a class="sidebar-link" data-view="newPurchase" onclick="switchView('newPurchase')"><span class="ic">📥</span> فاتورة مشتريات</a>
-    <a class="sidebar-link" data-view="newPurchaseReturn" onclick="switchView('newPurchaseReturn')"><span class="ic">↩️</span> مرتجع مشتريات</a>
-    <a class="sidebar-link" data-view="newReturn" onclick="switchView('newReturn')"><span class="ic">↩️</span> مرتجع مبيعات</a>
-    <a class="sidebar-link" data-view="newPayment" onclick="switchView('newPayment')"><span class="ic">💵</span> تسجيل دفعة</a>
+    <!-- ════════ 2) المبيعات والعملاء ════════ -->
+    <div class="side-group">
+      <div class="side-mod" data-mod="sales" onclick="toggleMod('sales')"><span class="side-mod-ico">🛒</span><span class="side-mod-lbl">المبيعات والعملاء</span><span class="side-caret">▾</span></div>
+      <div class="side-items" data-moditems="sales">
+        <a class="sidebar-link" data-view="customers" onclick="switchView('customers')"><span class="ic">🏢</span> العملاء (الجمعيات)</a>
+        <a class="sidebar-link" data-view="agents" onclick="switchView('agents')"><span class="ic">👥</span> المناديب</a>
+        <a class="sidebar-link" data-view="newSale" onclick="switchView('newSale')"><span class="ic">🧾</span> فاتورة المبيعات</a>
+        <a class="sidebar-link" data-view="items" onclick="switchView('items')"><span class="ic">📦</span> الأصناف</a>
+        <a class="sidebar-link soon"><span class="ic">🎁</span> عروض الجمعيات<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link" data-view="quotations" onclick="switchView('quotations')"><span class="ic">📄</span> عروض الأسعار</a>
+        <a class="sidebar-link" data-view="newReturn" onclick="switchView('newReturn')"><span class="ic">🔄</span> مرتجع مبيعات</a>
+        <a class="sidebar-link" data-view="newPayment" onclick="switchView('newPayment')"><span class="ic">💵</span> سند قبض</a>
+        <a class="sidebar-link" data-view="customerStatement" onclick="switchView('customerStatement')"><span class="ic">📋</span> كشف حساب عميل</a>
+        <a class="sidebar-link" data-view="commissions" onclick="switchView('commissions')"><span class="ic">💰</span> عمولات المندوبين</a>
+        <a class="sidebar-link" data-view="receivablesAging" onclick="switchView('receivablesAging')"><span class="ic">💳</span> التحصيل والمخاطر</a>
+        <a class="sidebar-link" data-view="analytics" onclick="switchView('analytics')"><span class="ic">🎯</span> تحليلات CLV + Churn</a>
+        <a class="sidebar-link soon"><span class="ic">🔮</span> التنبؤ بالمبيعات<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link soon"><span class="ic">🌐</span> بوابة العميل<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link soon"><span class="ic">📲</span> WhatsApp + SMS<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link soon"><span class="ic">📱</span> تطبيق المندوب<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link" data-view="documentsLog" onclick="switchView('documentsLog')"><span class="ic">📋</span> السجل الكامل</a>
+      </div>
+    </div>
 
-    <div class="sidebar-group-title">📈 التقارير</div>
-    <a class="sidebar-link" data-view="customerStatement" onclick="switchView('customerStatement')"><span class="ic">📋</span> كشف حساب عميل</a>
-    <a class="sidebar-link" data-view="receivablesAging" onclick="switchView('receivablesAging')"><span class="ic">⏳</span> أعمار الذمم</a>
-    <a class="sidebar-link" data-view="commissions" onclick="switchView('commissions')"><span class="ic">💵</span> عمولات المناديب</a>
+    <!-- ════════ 3) المخازن والتصنيع ════════ -->
+    <div class="side-group">
+      <div class="side-mod" data-mod="wh" onclick="toggleMod('wh')"><span class="side-mod-ico">🏭</span><span class="side-mod-lbl">المخازن والتصنيع</span><span class="side-caret">▾</span></div>
+      <div class="side-items" data-moditems="wh">
+        <a class="sidebar-link soon"><span class="ic">📊</span> نظرة عامة المخازن<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link soon"><span class="ic">📦</span> الأصناف (مستورد/محلي)<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link soon"><span class="ic">🔄</span> حركة المخزون<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link" data-view="whValuation" onclick="switchView('whValuation')"><span class="ic">💰</span> تقييم المخزون</a>
+        <a class="sidebar-link soon"><span class="ic">🧮</span> تحليل التكاليف<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link" data-view="stdCost" onclick="switchView('stdCost')"><span class="ic">🎯</span> التكلفة المعيارية</a>
+        <a class="sidebar-link" data-view="batch" onclick="switchView('batch')"><span class="ic">🏷️</span> التشغيلة والصلاحية</a>
+        <a class="sidebar-link" data-view="purchaseOrders" onclick="switchView('purchaseOrders')"><span class="ic">📦</span> أوامر الشراء (3-Way)</a>
+        <a class="sidebar-link" data-view="newPurchase" onclick="switchView('newPurchase')"><span class="ic">🧾</span> فاتورة مشتريات مباشرة</a>
+        <a class="sidebar-link" data-view="newPurchaseReturn" onclick="switchView('newPurchaseReturn')"><span class="ic">↩️</span> مرتجع مشتريات</a>
+        <a class="sidebar-link" data-view="suppliers" onclick="switchView('suppliers')"><span class="ic">🚚</span> الموردين</a>
+        <a class="sidebar-link" data-view="docs" onclick="switchView('docs')"><span class="ic">📎</span> مرفقات المستندات</a>
+      </div>
+    </div>
 
-    <div class="sidebar-group-title">🧮 المحاسبة المتقدمة</div>
-    <a class="sidebar-link" data-view="assets" onclick="switchView('assets')"><span class="ic">🏢</span> الأصول الثابتة</a>
-    <a class="sidebar-link" data-view="bankReconciliation" onclick="switchView('bankReconciliation')"><span class="ic">🏦</span> التسوية البنكية</a>
-    <a class="sidebar-link" data-view="tax" onclick="switchView('tax')"><span class="ic">🏛️</span> الضرائب</a>
+    <!-- ════════ 4) المحاسبة والمالية ════════ -->
+    <div class="side-group">
+      <div class="side-mod" data-mod="acct" onclick="toggleMod('acct')"><span class="side-mod-ico">📒</span><span class="side-mod-lbl">المحاسبة والمالية</span><span class="side-caret">▾</span></div>
+      <div class="side-items" data-moditems="acct">
+        <a class="sidebar-link" data-view="accounting" onclick="switchView('accounting')"><span class="ic">📒</span> النظام المحاسبي</a>
+        <a class="sidebar-link" data-view="approvals" onclick="switchView('approvals')"><span class="ic">✅</span> مركز اعتماد المستندات</a>
+        <a class="sidebar-link" data-view="posting" onclick="switchView('posting')"><span class="ic">📌</span> دفتر القيود المرحّلة</a>
+        <a class="sidebar-link soon"><span class="ic">📑</span> مركز التقارير<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link" data-view="fx" onclick="switchView('fx')"><span class="ic">💱</span> العملات وأسعار الصرف</a>
+        <a class="sidebar-link" data-view="budget" onclick="switchView('budget')"><span class="ic">📊</span> الموازنات التقديرية</a>
+        <a class="sidebar-link" data-view="assets" onclick="switchView('assets')"><span class="ic">🏢</span> الأصول الثابتة</a>
+        <a class="sidebar-link" data-view="bankReconciliation" onclick="switchView('bankReconciliation')"><span class="ic">🏦</span> التسوية البنكية</a>
+        <a class="sidebar-link" data-view="tax" onclick="switchView('tax')"><span class="ic">🏛️</span> الضرائب الكويتية</a>
+      </div>
+    </div>
 
-    <div class="sidebar-group-title">👥 الموارد البشرية</div>
-    <a class="sidebar-link" data-view="employees" onclick="switchView('employees')"><span class="ic">👤</span> الموظفون</a>
-    <a class="sidebar-link" data-view="payrollRun" onclick="switchView('payrollRun')"><span class="ic">💰</span> تشغيل الرواتب</a>
+    <!-- ════════ 5) الفروع ونقاط البيع ════════ -->
+    <div class="side-group">
+      <div class="side-mod" data-mod="branches" onclick="toggleMod('branches')"><span class="side-mod-ico">🏢</span><span class="side-mod-lbl">الفروع ونقاط البيع</span><span class="side-caret">▾</span></div>
+      <div class="side-items" data-moditems="branches">
+        <a class="sidebar-link" data-view="branches" onclick="switchView('branches')"><span class="ic">🏢</span> إدارة الفروع</a>
+      </div>
+    </div>
 
-    <div class="sidebar-group-title">📦 المشتريات المتقدمة</div>
-    <a class="sidebar-link" data-view="purchaseOrders" onclick="switchView('purchaseOrders')"><span class="ic">📋</span> أوامر الشراء</a>
+    <!-- ════════ 6) الموارد البشرية ════════ -->
+    <div class="side-group">
+      <div class="side-mod" data-mod="hr" onclick="toggleMod('hr')"><span class="side-mod-ico">👥</span><span class="side-mod-lbl">الموارد البشرية</span><span class="side-caret">▾</span></div>
+      <div class="side-items" data-moditems="hr">
+        <a class="sidebar-link" data-view="employees" onclick="switchView('employees')"><span class="ic">👤</span> الموظفون</a>
+        <a class="sidebar-link" data-view="payrollRun" onclick="switchView('payrollRun')"><span class="ic">💰</span> تشغيل الرواتب</a>
+        <a class="sidebar-link soon"><span class="ic">⚙️</span> محرك الموافقات<span class="soon-tag">قريبًا</span></a>
+      </div>
+    </div>
 
-    <div class="sidebar-group-title">📝 المبيعات المتقدمة</div>
-    <a class="sidebar-link" data-view="quotations" onclick="switchView('quotations')"><span class="ic">📝</span> عروض الأسعار</a>
-
-    <div class="sidebar-group-title">🏬 الإدارة</div>
-    <a class="sidebar-link" data-view="branches" onclick="switchView('branches')"><span class="ic">🏬</span> الفروع</a>
-    <a class="sidebar-link" data-view="documentsLog" onclick="switchView('documentsLog')"><span class="ic">🗂️</span> سجل المستندات</a>
+    <!-- ════════ 7) الإدارة والاختبار ════════ -->
+    <div class="side-group">
+      <div class="side-mod" data-mod="settings" onclick="toggleMod('settings')"><span class="side-mod-ico">⚙️</span><span class="side-mod-lbl">الإدارة والاختبار</span><span class="side-caret">▾</span></div>
+      <div class="side-items" data-moditems="settings">
+        <a class="sidebar-link" data-view="settings" onclick="switchView('settings')"><span class="ic">💾</span> الإعدادات</a>
+        <a class="sidebar-link soon"><span class="ic">🎨</span> الإعدادات المتقدمة<span class="soon-tag">قريبًا</span></a>
+      </div>
+    </div>
   </nav>
 
   <main class="main-content" id="mainContent">
@@ -245,6 +314,22 @@ let currentCompanyId = null;
 let cache = { customers: [], agents: [], items: [], suppliers: [] };
 let saleLineItem = null;
 let purchaseLineItem = null;
+
+// 🆕 فتح/قفل مجموعة فى القائمة الجانبية (زى toggleMod الأصلية)
+function toggleMod(modKey) {
+  const modHeader = document.querySelector(`.side-mod[data-mod="${modKey}"]`);
+  const modItems = document.querySelector(`.side-items[data-moditems="${modKey}"]`);
+  if (!modHeader || !modItems) return;
+  const isOpen = modItems.classList.contains('open');
+  if (isOpen) {
+    modItems.classList.remove('open');
+    modHeader.classList.remove('open');
+  } else {
+    modItems.classList.add('open');
+    modHeader.classList.add('open');
+  }
+}
+
 
 function showToast(message, type = 'success') {
   const el = document.createElement('div');
@@ -360,6 +445,9 @@ async function switchView(viewName) {
     assets: renderAssets, bankReconciliation: renderBankReconciliation, tax: renderTax,
     employees: renderEmployees, payrollRun: renderPayrollRun,
     purchaseOrders: renderPurchaseOrders, quotations: renderQuotations, branches: renderBranches,
+    accounting: renderAccounting, posting: renderPosting, budget: renderBudget, fx: renderFx,
+    approvals: renderApprovals, whValuation: renderWhValuation, stdCost: renderStdCost, batch: renderBatch,
+    docs: renderDocs, analytics: renderAnalytics, settings: renderSettings,
   };
   try { await renderers[viewName](); }
   catch (e) { document.getElementById('mainContent').innerHTML = `<div class="empty-state msg-error">خطأ: ${e.message}</div>`; }
@@ -823,12 +911,88 @@ async function renderCustomerStatement() {
           <input id="st_from" type="date">
           <input id="st_to" type="date">
           <button class="btn-gold" onclick="loadStatementAction()">عرض الكشف</button>
+          <button id="printStatementBtn" onclick="printCustomerStatement()" style="display:none">🖨️ طباعة رسمية</button>
         </div>
       </div>
       <div id="statementOutput"></div>
     </div>`;
   initSearchSelect('stCust', cache.customers.map(c => ({ id: c.id, name: c.name })));
 }
+
+async function printCustomerStatement() {
+  const customerId = getSearchSelectValue('stCust');
+  if (!customerId || !window._lastStatementData) { showToast('اعرض الكشف أولًا', 'error'); return; }
+  const { custResult, rows, openingBalance, closingBalance, fromDate, toDate } = window._lastStatementData;
+
+  const { data: company } = await supabaseClient.from('companies')
+    .select('name_ar, name_en, tax_number, cr_number, address, phone').eq('id', currentCompanyId).single();
+
+  const logoInitial = (company?.name_ar || 'p').trim().charAt(0) || 'p';
+  const now = new Date().toLocaleString('ar-KW', { dateStyle: 'medium', timeStyle: 'short' });
+  const metaLines = [];
+  if (company?.cr_number) metaLines.push('س.ت: ' + company.cr_number);
+  if (company?.tax_number) metaLines.push('الرقم الضريبي: ' + company.tax_number);
+  if (company?.phone) metaLines.push('هاتف: ' + company.phone);
+
+  const w = window.open('', '_blank', 'width=900,height=700');
+  if (!w) { showToast('اسمح بالنوافذ المنبثقة', 'error'); return; }
+
+  w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>كشف حساب - ${custResult.customer.name}</title>
+  <style>
+    body{ font-family:"Tajawal",system-ui,"Segoe UI",Tahoma,sans-serif; padding:24px; color:#222; background:#fff; max-width:850px; margin:0 auto }
+    .ph-row{ display:flex; align-items:center; gap:16px; padding-bottom:10px; border-bottom:2.5px solid #1F2A44 }
+    .ph-logo-ph{ width:70px; height:70px; border-radius:10px; background:#1F2A44; color:#C9A227; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:900 }
+    .ph-names{ flex:1; text-align:center }
+    .ph-name-ar{ font-size:20px; font-weight:900; color:#1F2A44 }
+    .ph-name-en{ font-size:12px; font-weight:700; color:#C9A227 }
+    .ph-meta{ font-size:10px; color:#444; text-align:left; line-height:1.7; min-width:120px }
+    .ph-title-bar{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding:6px 10px; background:#f3f0e6; border:1px solid #e0d6b8; border-radius:6px }
+    .ph-rtitle{ font-size:15px; font-weight:800; color:#1F2A44 }
+    .ph-rmeta{ font-size:10px; color:#666 }
+    .kg{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:16px 0 }
+    .kpi{ border:1px solid #e6e0cf; border-radius:10px; padding:11px; text-align:center; background:#fff; border-top:3px solid #C9A227 }
+    .kpi .kl{ font-size:10.5px; color:#888 } .kpi .kv{ font-size:18px; font-weight:900; margin:2px 0 } .kpi .ks{ font-size:10px; color:#999 }
+    h3{ color:#1F2A44; font-size:14px; margin:16px 0 6px; padding-right:9px; border-right:4px solid #C9A227 }
+    table{ width:100%; border-collapse:collapse; font-size:11.5px }
+    th,td{ border:1px solid #e2e2e2; padding:7px 8px; text-align:center }
+    thead th{ background:#1F2A44; color:#fff; font-weight:700; font-size:10.5px }
+    tbody tr:nth-child(even){ background:#fafafa }
+    .print-footer-doc{ margin-top:40px; display:flex; justify-content:space-around }
+    .pf-sign{ text-align:center; font-size:12px; color:#444 }
+    .pf-line{ display:block; border-top:1px solid #888; width:170px; margin-top:30px }
+    @media print{ body{padding:8px} }
+  </style></head><body>
+  <div class="ph-row">
+    <div class="ph-logo-ph">${logoInitial}</div>
+    <div class="ph-names">
+      <div class="ph-name-ar">${company?.name_ar||'اسم الشركة'}</div>
+      ${company?.name_en ? `<div class="ph-name-en">${company.name_en}</div>` : ''}
+    </div>
+    <div class="ph-meta">${metaLines.join('<br>')}</div>
+  </div>
+  <div class="ph-title-bar">
+    <div class="ph-rtitle">كشف حساب — ${custResult.customer.name}</div>
+    <div class="ph-rmeta">الفترة: ${fromDate||'البداية'} ← ${toDate||'اليوم'} · تاريخ الطباعة: ${now}</div>
+  </div>
+  <div class="kg">
+    <div class="kpi"><div class="kl">الرصيد الافتتاحي</div><div class="kv">${openingBalance.toFixed(3)}</div></div>
+    <div class="kpi" style="border-top-color:#1e7a3a"><div class="kl">الرصيد الختامي</div><div class="kv" style="color:#1e7a3a">${closingBalance.toFixed(3)}</div></div>
+    <div class="kpi" style="border-top-color:#2563a8"><div class="kl">عدد الحركات</div><div class="kv" style="color:#2563a8">${rows.length}</div></div>
+  </div>
+  <h3>📋 تفاصيل الحركات</h3>
+  <table>
+    <thead><tr><th>التاريخ</th><th>البيان</th><th>الصنف</th><th>الكمية</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead>
+    <tbody>${rows.join('')}</tbody>
+  </table>
+  <div class="print-footer-doc">
+    <div class="pf-sign">اعتماد المدير المالي<span class="pf-line"></span></div>
+    <div class="pf-sign">المحاسب / المُعِدّ<span class="pf-line"></span></div>
+  </div>
+  </body></html>`);
+  w.document.close();
+  setTimeout(() => { try { w.print(); } catch(e) {} }, 400);
+}
+
 async function loadStatementAction() {
   const customerId = getSearchSelectValue('stCust');
   const fromDate = document.getElementById('st_from').value;
@@ -870,6 +1034,12 @@ async function loadStatementAction() {
       <thead><tr><th>التاريخ</th><th>البيان</th><th>الصنف</th><th>الكمية</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="7" class="empty-state">لا توجد حركات</td></tr>'}</tbody>
     </table>`;
+
+  window._lastStatementData = {
+    custResult, rows: rows ? [rows] : [], openingBalance: openingResult.balance || 0,
+    closingBalance: runningBalance, fromDate, toDate
+  };
+  document.getElementById('printStatementBtn').style.display = 'inline-block';
 }
 
 async function renderNewPayment() {
@@ -1149,89 +1319,142 @@ async function printDocument(docType, docNo) {
   if (!result.ok) { showToast(result.error, 'error'); return; }
   const doc = result.doc;
 
+  const typeLabels = {
+    sale: 'فاتورة مبيعات', purchase: 'فاتورة مشتريات', payment: 'سند قبض',
+    return: 'مرتجع مبيعات', purchase_return: 'مرتجع مشتريات',
+  };
+
   const itemsRows = doc.items.length > 0 ? doc.items.map(it => `
     <tr>
       <td>${it.name}</td>
-      <td>${it.qty} ${it.unit}</td>
-      <td>${it.unitPrice.toFixed(3)}</td>
-      <td>${it.taxAmount > 0 ? it.taxAmount.toFixed(3) : '—'}</td>
-      <td><strong>${it.lineTotal.toFixed(3)}</strong></td>
+      <td class="num">${it.qty} ${it.unit}</td>
+      <td class="num">${it.unitPrice.toFixed(3)}</td>
+      <td class="num">${it.taxAmount > 0 ? it.taxAmount.toFixed(3) : '—'}</td>
+      <td class="num"><b>${it.lineTotal.toFixed(3)}</b></td>
     </tr>`).join('') : `
-    <tr><td colspan="4">قيمة السند المستلمة نقدًا/بنكيًا</td><td><strong>${doc.grandTotal.toFixed(3)}</strong></td></tr>`;
+    <tr><td colspan="4">قيمة السند المستلمة نقدًا/بنكيًا</td><td class="num"><b>${doc.grandTotal.toFixed(3)}</b></td></tr>`;
 
-  document.getElementById('printArea').innerHTML = `
-    <div class="print-doc">
-      <div class="print-top-bar"></div>
-      <div class="print-header">
-        <div class="print-brand">
-          <div class="print-brand-mark">
-            <svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <rect x="27" y="52" width="10" height="24" rx="2.5" fill="#b8932f"/>
-              <rect x="41" y="42" width="10" height="34" rx="2.5" fill="#b8932f"/>
-              <rect x="55" y="30" width="10" height="46" rx="2.5" fill="#b8932f"/>
-              <rect x="69" y="18" width="10" height="58" rx="2.5" fill="#d9bc8c"/>
-            </svg>
-          </div>
-          <div>
-            <div class="print-company-name">${doc.company?.name_ar || 'اسم الشركة'}</div>
-            <div class="print-company-details">
-              ${doc.company?.address ? `📍 ${doc.company.address}<br>` : ''}
-              ${doc.company?.phone ? `📞 ${doc.company.phone}` : ''} ${doc.company?.email ? ` &nbsp;|&nbsp; ✉️ ${doc.company.email}` : ''}<br>
-              ${doc.company?.tax_number ? `الرقم الضريبي: ${doc.company.tax_number} &nbsp; ` : ''}
-              ${doc.company?.cr_number ? `السجل التجاري: ${doc.company.cr_number}` : ''}
-            </div>
-          </div>
-        </div>
-        <div class="print-doc-box">
-          ${doc.isReturn ? '<div class="print-return-badge">مستند مرتجع</div>' : ''}
-          <div class="print-doc-title">${doc.typeLabel}</div>
-          <div class="print-doc-meta-row"><span class="k">رقم المستند</span><span class="v">${doc.docNo}</span></div>
-          <div class="print-doc-meta-row"><span class="k">التاريخ</span><span class="v">${new Date(doc.date).toLocaleDateString('ar-KW')}</span></div>
-          ${doc.refDocNo ? `<div class="print-doc-meta-row"><span class="k">مرجع لمستند</span><span class="v">${doc.refDocNo}</span></div>` : ''}
-        </div>
-      </div>
+  const logoInitial = (doc.company?.name_ar || 'p').trim().charAt(0) || 'p';
+  const now = new Date().toLocaleString('ar-KW', { dateStyle: 'medium', timeStyle: 'short' });
+  const metaLines = [];
+  if (doc.company?.cr_number) metaLines.push('س.ت: ' + doc.company.cr_number);
+  if (doc.company?.tax_number) metaLines.push('الرقم الضريبي: ' + doc.company.tax_number);
+  if (doc.company?.phone) metaLines.push('هاتف: ' + doc.company.phone);
 
-      ${doc.party ? `
-      <div class="print-party-box">
-        <div class="label">بيانات ${doc.partyLabel}</div>
-        <div class="name">${doc.party.name}</div>
-        <div class="details">
-          ${doc.party.code ? `الكود: ${doc.party.code} &nbsp; ` : ''}
-          ${doc.party.phone ? `📞 ${doc.party.phone}` : ''}
-          ${doc.party.address ? ` &nbsp; 📍 ${doc.party.address}` : ''}
-          ${doc.party.tax_number ? ` &nbsp; الرقم الضريبي: ${doc.party.tax_number}` : ''}
-        </div>
-      </div>` : ''}
+  const w = window.open('', '_blank', 'width=900,height=700');
+  if (!w) { showToast('اسمح بالنوافذ المنبثقة لعرض الطباعة', 'error'); return; }
 
-      ${docType !== 'payment' ? `
-      <div>
-        ${doc.isCredit ? '<span class="print-credit-badge">آجل — على الحساب</span>' : '<span class="print-cash-badge">نقدي</span>'}
-      </div><br>` : ''}
+  w.document.write(`<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>${typeLabels[docType] || docType} - ${docNo}</title>
+<style>
+  body{ font-family:"Tajawal",system-ui,"Segoe UI",Tahoma,sans-serif; padding:24px; color:#222; background:#fff; max-width:800px; margin:0 auto }
 
-      <table class="print-items-table">
-        <thead><tr><th>البيان</th><th>الكمية</th><th>سعر الوحدة</th><th>الضريبة</th><th>الإجمالي</th></tr></thead>
-        <tbody>${itemsRows}</tbody>
-      </table>
+  /* ===== الترويسة الرسمية (مطابقة buildPrintHeader الأصلية) ===== */
+  .ph-row{ display:flex; align-items:center; gap:16px; padding-bottom:10px; border-bottom:2.5px solid #1F2A44 }
+  .ph-logo-wrap{ flex:0 0 auto }
+  .ph-logo-ph{ width:70px; height:70px; border-radius:10px; background:#1F2A44; color:#C9A227; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:900 }
+  .ph-names{ flex:1; text-align:center }
+  .ph-name-ar{ font-size:20px; font-weight:900; color:#1F2A44; line-height:1.3 }
+  .ph-name-en{ font-size:12px; font-weight:700; color:#C9A227; letter-spacing:.3px; margin-top:2px }
+  .ph-addr{ font-size:10.5px; color:#555; margin-top:3px }
+  .ph-meta{ flex:0 0 auto; font-size:10px; color:#444; text-align:left; line-height:1.7; min-width:120px }
+  .ph-title-bar{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding:6px 10px; background:#f3f0e6; border:1px solid #e0d6b8; border-radius:6px }
+  .ph-rtitle{ font-size:15px; font-weight:800; color:#1F2A44 }
+  .ph-rmeta{ font-size:10px; color:#666 }
 
-      <div class="print-totals-wrap">
-        <div class="print-totals-box">
-          <div class="row"><span class="k">الإجمالي قبل الضريبة</span><span>${doc.subtotal.toFixed(3)} ${doc.currency}</span></div>
-          ${doc.grandTax > 0 ? `<div class="row"><span class="k">إجمالي الضريبة</span><span>${doc.grandTax.toFixed(3)} ${doc.currency}</span></div>` : ''}
-          <div class="row grand"><span>الإجمالي المستحق</span><span>${doc.grandTotal.toFixed(3)} ${doc.currency}</span></div>
-        </div>
-      </div>
+  /* ===== بيانات الطرف الآخر ===== */
+  .party-box{ background:#faf8f2; border-right:4px solid #C9A227; border-radius:8px; padding:10px 16px; margin:16px 0 }
+  .party-label{ font-size:10px; color:#999; text-transform:uppercase }
+  .party-name{ font-size:15px; font-weight:800; color:#1F2A44; margin:2px 0 }
+  .party-details{ font-size:11px; color:#666 }
 
-      <div class="print-notes-box">
-        تم إصدار هذا المستند إلكترونيًا عبر نظام prova ERP بتاريخ ${new Date().toLocaleDateString('ar-KW')}.
-      </div>
+  /* ===== شارات الحالة ===== */
+  .badge{ display:inline-block; font-size:10.5px; font-weight:700; padding:3px 12px; border-radius:20px; margin-left:6px }
+  .badge-return{ background:#c0392b; color:#fff }
+  .badge-credit{ background:#fef3c7; color:#92400e }
+  .badge-cash{ background:#e6f4ec; color:#1e7a4d }
 
-      <div class="print-footer">
-        <div class="print-sign-box"><div class="print-sign-line">توقيع المستلم</div></div>
-        <div class="print-sign-box"><div class="print-sign-line">توقيع المسؤول المعتمد</div></div>
-      </div>
-    </div>`;
+  /* ===== الجدول (مطابق تصميم كشف الحساب الأصلي) ===== */
+  h3{ color:#1F2A44; font-size:14px; margin:16px 0 6px; padding-right:9px; border-right:4px solid #C9A227 }
+  table{ width:100%; border-collapse:collapse; font-size:12px; margin-top:4px }
+  th,td{ border:1px solid #e2e2e2; padding:8px 9px; text-align:center; vertical-align:middle }
+  thead th{ background:#1F2A44; color:#fff; font-weight:700; font-size:11px }
+  tbody tr:nth-child(even){ background:#fafafa }
+  td.num{ font-variant-numeric:tabular-nums; white-space:nowrap }
+  tr.tot td{ background:#f3f0e6; font-weight:900; border-top:2px solid #C9A227 }
 
-  window.print();
+  /* ===== بطاقة الإجمالي (نفس تصميم tcard الأصلي) ===== */
+  .tcard{ background:linear-gradient(135deg,#5a4a1a,#8a6d1a); color:#fff; border-radius:12px; padding:14px 18px; text-align:center; margin:16px 0 }
+  .tcard .l{ font-size:12px; color:#f0e6c8 }
+  .tcard .v{ font-size:30px; font-weight:900 }
+
+  /* ===== التذييل (مطابق buildPrintFooter الأصلية) ===== */
+  .print-footer-doc{ margin-top:40px; display:flex; justify-content:space-around; align-items:flex-end }
+  .pf-sign{ text-align:center; font-size:12px; color:#444 }
+  .pf-line{ display:block; border-top:1px solid #888; width:170px; margin-top:30px }
+  .pf-note{ position:absolute; left:24px; font-size:9.5px; color:#999 }
+
+  @media print{
+    body{ padding:8px }
+    .no-print{ display:none !important }
+  }
+</style>
+</head>
+<body>
+
+<div class="ph-row">
+  <div class="ph-logo-wrap"><div class="ph-logo-ph">${logoInitial}</div></div>
+  <div class="ph-names">
+    <div class="ph-name-ar">${doc.company?.name_ar || 'اسم الشركة'}</div>
+    ${doc.company?.name_en ? `<div class="ph-name-en">${doc.company.name_en}</div>` : ''}
+    ${doc.company?.address ? `<div class="ph-addr">${doc.company.address}</div>` : ''}
+  </div>
+  <div class="ph-meta">${metaLines.join('<br>')}</div>
+</div>
+<div class="ph-title-bar">
+  <div class="ph-rtitle">${typeLabels[docType] || docType} — رقم ${docNo}</div>
+  <div class="ph-rmeta">${doc.refDocNo ? 'مرجع: ' + doc.refDocNo + ' · ' : ''}تاريخ الطباعة: ${now}</div>
+</div>
+
+${doc.party ? `
+<div class="party-box">
+  <div class="party-label">بيانات ${doc.partyLabel}</div>
+  <div class="party-name">${doc.party.name}</div>
+  <div class="party-details">
+    ${doc.party.code ? 'الكود: ' + doc.party.code + ' &nbsp; ' : ''}
+    ${doc.party.phone ? '📞 ' + doc.party.phone : ''}
+    ${doc.party.address ? ' &nbsp; 📍 ' + doc.party.address : ''}
+  </div>
+</div>` : ''}
+
+<div>
+  ${doc.isReturn ? '<span class="badge badge-return">مستند مرتجع</span>' : ''}
+  ${docType !== 'payment' ? (doc.isCredit ? '<span class="badge badge-credit">آجل — على الحساب</span>' : '<span class="badge badge-cash">نقدي</span>') : ''}
+</div>
+
+<h3>📋 تفاصيل ${typeLabels[docType] || docType}</h3>
+<table>
+  <thead><tr><th>البيان</th><th>الكمية</th><th>سعر الوحدة</th><th>الضريبة</th><th>الإجمالي</th></tr></thead>
+  <tbody>${itemsRows}</tbody>
+</table>
+
+<div class="tcard">
+  <div class="l">الإجمالي المستحق</div>
+  <div class="v">${doc.grandTotal.toFixed(3)} ${doc.currency}</div>
+</div>
+
+<div class="print-footer-doc">
+  <div class="pf-sign">اعتماد المدير المالي<span class="pf-line"></span></div>
+  <div class="pf-sign">المحاسب / المُعِدّ<span class="pf-line"></span></div>
+</div>
+<div class="pf-note">${doc.company?.name_ar || 'prova ERP'} — نظام دعم القرار المالي</div>
+
+</body></html>`);
+  w.document.close();
+  setTimeout(() => { try { w.print(); } catch(e) {} }, 400);
 }
 
 const docTypeLabels = { sale: 'فاتورة مبيعات', purchase: 'فاتورة مشتريات', payment: 'سند قبض', return: 'مرتجع مبيعات', purchase_return: 'مرتجع مشتريات' };
@@ -1821,6 +2044,363 @@ async function renderReceivablesAging() {
         </tbody>
       </table>
     </div>`;
+}
+
+
+/* ============================================================
+   🆕 الأجزاء الناقصة — جزء 1: المحاسبة، الموازنة، العملات الأجنبية
+   ============================================================ */
+
+/* ---------- النظام المحاسبي (دليل الحسابات + ميزان المراجعة) ---------- */
+async function renderAccounting() {
+  const result = await LedgerClient.trialBalance(currentCompanyId);
+  const rows = result.ok ? result.rows : [];
+  const totalDebit = rows.reduce((s,r) => s + (r.total_debit||0), 0);
+  const totalCredit = rows.reduce((s,r) => s + (r.total_credit||0), 0);
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('📒','النظام المحاسبي — ميزان المراجعة')}
+      <div class="kpi-row">
+        <div class="kpi"><div class="label">إجمالي مدين</div><div class="value">${totalDebit.toFixed(3)}</div></div>
+        <div class="kpi"><div class="label">إجمالي دائن</div><div class="value">${totalCredit.toFixed(3)}</div></div>
+        <div class="kpi"><div class="label">الفرق</div><div class="value" style="color:${Math.abs(totalDebit-totalCredit)<0.01?'var(--success)':'var(--danger)'}">${(totalDebit-totalCredit).toFixed(3)}</div></div>
+      </div>
+      <table>
+        <thead><tr><th>الكود</th><th>الحساب</th><th>النوع</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead>
+        <tbody>
+          ${rows.filter(r=>r.total_debit>0||r.total_credit>0).map(r => `
+            <tr><td>${r.code}</td><td>${r.name_ar}</td><td>${r.account_type}</td>
+              <td>${r.total_debit.toFixed(3)}</td><td>${r.total_credit.toFixed(3)}</td><td><strong>${r.balance.toFixed(3)}</strong></td></tr>`).join('') || '<tr><td colspan="6" class="empty-state">لا توجد حركات بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+/* ---------- دفتر القيود المرحّلة (Posting Ledger) ---------- */
+async function renderPosting() {
+  const result = await LedgerClient.journalEntries(currentCompanyId);
+  const entries = result.ok ? result.entries : [];
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('📌','دفتر القيود المرحّلة', entries.length + ' قيد')}
+      ${entries.map(e => `
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft);margin-bottom:8px">
+            <span>${e.description}</span><span>${new Date(e.entry_date).toLocaleDateString('ar-KW')} — مرجع: ${e.source_doc_no||'—'}</span>
+          </div>
+          <table>
+            <thead><tr><th>الحساب</th><th>البيان</th><th>مدين</th><th>دائن</th></tr></thead>
+            <tbody>
+              ${(e.journal_entry_lines||[]).map(l => `<tr><td>${l.chart_of_accounts?.code} - ${l.chart_of_accounts?.name_ar}</td><td>${l.description||'—'}</td><td>${l.debit>0?l.debit.toFixed(3):'—'}</td><td>${l.credit>0?l.credit.toFixed(3):'—'}</td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`).join('') || '<div class="empty-state">لا توجد قيود بعد</div>'}
+    </div>`;
+}
+
+/* ---------- الموازنات التقديرية ---------- */
+async function renderBudget() {
+  const [budResult, coaResult] = await Promise.all([BudgetUIClient.listBudgets(currentCompanyId), LedgerClient.chartOfAccounts(currentCompanyId)]);
+  const budgets = budResult.ok ? budResult.budgets : [];
+  cache.chartOfAccounts = coaResult.ok ? coaResult.accounts : [];
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('📊','الموازنات التقديرية')}
+      <div class="toolbar"><div class="spacer"></div><button class="btn-gold" onclick="openCreateBudgetModal()">+ موازنة جديدة</button></div>
+      <div class="list-grid">
+        ${budgets.map(b => `
+          <div class="entity-card">
+            <div class="ec-top"><div class="ec-name">${b.fiscal_year} — ${b.scenario_name||b.scenario}</div></div>
+            <div class="ec-badge ${b.approval_status==='approved'?'':'warn'}">${b.approval_status}</div>
+            <button style="margin-top:8px;width:100%" onclick="viewBudgetVsActual('${b.fiscal_year}','${b.scenario}')">📊 مقارنة بالفعلي</button>
+          </div>`).join('') || '<div class="empty-state">لا يوجد موازنات بعد</div>'}
+      </div>
+      <div id="budgetVsActualArea" style="margin-top:20px"></div>
+    </div>`;
+}
+function openCreateBudgetModal() {
+  openModal('➕ موازنة جديدة', `
+    <label>السنة المالية *</label><input id="m_budYear" type="number" value="${new Date().getFullYear()}">
+    <label>السيناريو</label>
+    <select id="m_budScenario">
+      <option value="base">أساسي</option><option value="optimistic">متفائل</option><option value="pessimistic">متشائم</option>
+    </select>
+    <div id="m_budMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitCreateBudget()">إنشاء</button></div>
+  `);
+}
+async function submitCreateBudget() {
+  const year = parseInt(document.getElementById('m_budYear').value);
+  const scenario = document.getElementById('m_budScenario').value;
+  const names = { base: 'السيناريو الأساسي', optimistic: 'متفائل', pessimistic: 'متشائم' };
+  const result = await BudgetUIClient.createBudget(currentCompanyId, year, scenario, names[scenario]);
+  if (!result.ok) { document.getElementById('m_budMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal(); showToast('تم إنشاء الموازنة'); renderBudget();
+}
+async function viewBudgetVsActual(year, scenario) {
+  const result = await BudgetUIClient.vsActual(currentCompanyId, year, scenario);
+  const rows = result.ok ? result.rows : [];
+  document.getElementById('budgetVsActualArea').innerHTML = `
+    <div class="card"><h3>📊 مقارنة الموازنة بالفعلي — ${year}</h3>
+    <table>
+      <thead><tr><th>الحساب</th><th>الموازنة</th><th>الفعلي</th><th>الفرق</th><th>النسبة</th></tr></thead>
+      <tbody>${rows.map(r => `<tr><td>${r.account_name}</td><td>${r.budgeted.toFixed(3)}</td><td>${r.actual.toFixed(3)}</td>
+        <td style="color:${r.variance<0?'var(--danger)':'var(--success)'}">${r.variance.toFixed(3)}</td><td>${r.variance_pct}%</td></tr>`).join('') || '<tr><td colspan="5" class="empty-state">لا توجد بنود موازنة مُدخلة بعد</td></tr>'}</tbody>
+    </table></div>`;
+}
+
+/* ---------- العملات وأسعار الصرف ---------- */
+async function renderFx() {
+  const [ratesResult, itemsResult] = await Promise.all([FxUIClient.listRates(currentCompanyId), FxUIClient.listOpenItems(currentCompanyId)]);
+  const rates = ratesResult.ok ? ratesResult.rates : [];
+  const openItems = itemsResult.ok ? itemsResult.items : [];
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('💱','العملات وأسعار الصرف')}
+      <table>
+        <thead><tr><th>العملة</th><th>السعر مقابل د.ك</th><th>المصدر</th><th>التاريخ</th></tr></thead>
+        <tbody>${rates.map(r => `<tr><td><strong>${r.currency_code}</strong></td><td>${r.rate_to_base}</td><td>${r.source}</td><td>${r.rate_date}</td></tr>`).join('') || '<tr><td colspan="4" class="empty-state">لا توجد أسعار</td></tr>'}</tbody>
+      </table>
+      <div class="card" style="margin-top:20px">
+        <h3>⚖️ بنود مفتوحة بعملة أجنبية تحتاج إعادة تقييم</h3>
+        <table>
+          <thead><tr><th>العملة</th><th>المبلغ الأصلي</th><th>السعر الأصلي</th><th></th></tr></thead>
+          <tbody>${openItems.map(i => `<tr><td>${i.currency_code}</td><td>${i.original_amount.toFixed(3)}</td><td>${i.original_rate}</td>
+            <td><button onclick="revalueItem('${i.id}','${i.currency_code}')">🔄 أعد التقييم</button></td></tr>`).join('') || '<tr><td colspan="4" class="empty-state">لا توجد بنود مفتوحة</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+async function revalueItem(itemId, currencyCode) {
+  const newRate = prompt(`السعر الجديد لـ ${currencyCode} مقابل الدينار الكويتي:`);
+  if (!newRate) return;
+  const result = await FxUIClient.revalue(itemId, parseFloat(newRate));
+  if (!result.ok) { showToast(result.error, 'error'); return; }
+  showToast(`تم إعادة التقييم — ${result.gain_loss >= 0 ? 'ربح' : 'خسارة'}: ${Math.abs(result.gain_loss).toFixed(3)}`);
+  renderFx();
+}
+
+/* ============================================================
+   🆕 الأجزاء الناقصة — جزء 2: الموافقات، المخازن، الدفعات، المستندات، CLV، الإعدادات
+   ============================================================ */
+
+/* ---------- مركز اعتماد المستندات (Approvals) ---------- */
+async function renderApprovals() {
+  const result = await WorkflowUIClient.listRequests(currentCompanyId);
+  const requests = result.ok ? result.requests : [];
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('✅','مركز اعتماد المستندات', requests.length + ' طلب')}
+      <table>
+        <thead><tr><th>النوع</th><th>القالب</th><th>المبلغ</th><th>الخطوة الحالية</th><th>الحالة</th><th></th></tr></thead>
+        <tbody>
+          ${requests.map(r => `
+            <tr>
+              <td>${r.reference_type}</td><td>${r.workflow_templates?.name||'—'}</td><td>${r.amount?.toFixed(3)||'—'}</td>
+              <td>${r.current_step_order}</td><td><span class="ec-badge ${r.status==='approved'?'':r.status==='rejected'?'danger':'warn'}">${r.status}</span></td>
+              <td>${r.status==='pending' ? `<button onclick="actOnApproval('${r.id}','approved')">✅ اعتماد</button><button onclick="actOnApproval('${r.id}','rejected')">❌ رفض</button>` : '—'}</td>
+            </tr>`).join('') || '<tr><td colspan="6" class="empty-state">لا توجد طلبات موافقة بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+async function actOnApproval(requestId, action) {
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  const result = await WorkflowUIClient.act(requestId, user.id, action);
+  if (!result.ok) { showToast(result.error, 'error'); return; }
+  showToast(action === 'approved' ? `تم الاعتماد — الحالة: ${result.status}` : 'تم الرفض');
+  renderApprovals();
+}
+
+/* ---------- تقييم المخزون (Warehouse Valuation) ---------- */
+async function renderWhValuation() {
+  const result = await WarehouseUIClient.valuation(currentCompanyId);
+  const rows = result.ok ? result.rows : [];
+  const totalValue = rows.reduce((s,r) => s + (r.total_value||0), 0);
+  const statusLabels = { ok: '✅ موفور', low: '⚠️ منخفض', out: '❌ صفر', over: '📈 فائض' };
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('💰','تقييم المخزون (المتوسط المرجح — IAS 2)')}
+      <div class="kpi-row">
+        <div class="kpi"><div class="label">💰 قيمة المخزون</div><div class="value">${totalValue.toFixed(3)}</div></div>
+        <div class="kpi"><div class="label">📦 مستورد</div><div class="value">${rows.filter(r=>r.origin==='imported').length}</div></div>
+        <div class="kpi"><div class="label">🏭 محلي</div><div class="value">${rows.filter(r=>r.origin==='local').length}</div></div>
+        <div class="kpi"><div class="label">⚠️ منخفض</div><div class="value">${rows.filter(r=>r.stock_status==='low'||r.stock_status==='out').length}</div></div>
+      </div>
+      <table>
+        <thead><tr><th>الكود</th><th>الصنف</th><th>الكمية</th><th>متوسط التكلفة</th><th>القيمة</th><th>النسبة</th><th>الحالة</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr><td>${r.code}</td><td><strong>${r.name}</strong></td><td>${r.stock_qty}</td><td>${r.unit_cost.toFixed(4)}</td>
+              <td><strong style="color:var(--gold-2)">${r.total_value.toFixed(3)}</strong></td>
+              <td>${totalValue?((r.total_value/totalValue)*100).toFixed(1):0}%</td><td>${statusLabels[r.stock_status]}</td></tr>`).join('') || '<tr><td colspan="7" class="empty-state">لا توجد أصناف</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+/* ---------- التكلفة المعيارية (Standard Cost Variance) ---------- */
+async function renderStdCost() {
+  const result = await WarehouseUIClient.costVariance(currentCompanyId);
+  const rows = result.ok ? result.rows : [];
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('🎯','التكلفة المعيارية مقابل الفعلي')}
+      <table>
+        <thead><tr><th>الكود</th><th>الصنف</th><th>معياري</th><th>فعلي</th><th>الفرق</th><th>النسبة</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr><td>${r.code}</td><td>${r.name}</td><td>${r.standard_cost.toFixed(3)}</td><td>${r.actual_cost.toFixed(3)}</td>
+              <td style="color:${r.variance>0?'var(--danger)':'var(--success)'}">${r.variance.toFixed(3)}</td><td>${r.variance_pct}%</td></tr>`).join('') || '<tr><td colspan="6" class="empty-state">لم تُحدَّد تكاليف معيارية بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+/* ---------- التشغيلة والصلاحية (Batch/Expiry) ---------- */
+async function renderBatch() {
+  const [batchResult, alertResult, itemsResult] = await Promise.all([
+    BatchUIClient.list(currentCompanyId), BatchUIClient.expiringAlert(currentCompanyId), ItemsClient.list(currentCompanyId)
+  ]);
+  const batches = batchResult.ok ? batchResult.batches : [];
+  const alerts = alertResult.ok ? alertResult.rows : [];
+  cache.items = itemsResult.ok ? itemsResult.items : [];
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('🏷️','التشغيلة والصلاحية', batches.length + ' تشغيلة')}
+      ${alerts.length > 0 ? `<div class="card" style="border-right:4px solid #d97706"><strong>⚠️ ${alerts.length} تشغيلة قريبة من انتهاء الصلاحية (خلال 30 يوم)</strong></div>` : ''}
+      <div class="toolbar"><div class="spacer"></div><button class="btn-gold" onclick="openAddBatchModal()">+ تشغيلة جديدة</button></div>
+      <table>
+        <thead><tr><th>رقم التشغيلة</th><th>الصنف</th><th>الكمية المتبقية</th><th>تاريخ الإنتاج</th><th>الصلاحية</th><th>الحالة</th></tr></thead>
+        <tbody>
+          ${batches.map(b => `
+            <tr><td>${b.batch_number}</td><td>${b.items?.name||'—'}</td><td>${b.qty_remaining}</td>
+              <td>${b.production_date}</td><td>${b.expiry_date||'—'}</td><td><span class="ec-badge ${b.status==='active'?'':'danger'}">${b.status}</span></td></tr>`).join('') || '<tr><td colspan="6" class="empty-state">لا توجد تشغيلات بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+function openAddBatchModal() {
+  const itemOptions = (cache.items||[]).map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+  openModal('➕ تشغيلة جديدة', `
+    <label>الصنف *</label><select id="m_batchItem">${itemOptions}</select>
+    <label>رقم التشغيلة *</label><input id="m_batchNum">
+    <label>الكمية المنتجة *</label><input id="m_batchQty" type="number">
+    <label>تاريخ الإنتاج *</label><input id="m_batchProd" type="date" value="${new Date().toISOString().split('T')[0]}">
+    <label>تاريخ الصلاحية</label><input id="m_batchExp" type="date">
+    <div id="m_batchMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitAddBatch()">حفظ</button></div>
+  `);
+}
+async function submitAddBatch() {
+  const batch = {
+    item_id: document.getElementById('m_batchItem').value,
+    batch_number: document.getElementById('m_batchNum').value,
+    qty_produced: parseFloat(document.getElementById('m_batchQty').value) || 0,
+    qty_remaining: parseFloat(document.getElementById('m_batchQty').value) || 0,
+    production_date: document.getElementById('m_batchProd').value,
+    expiry_date: document.getElementById('m_batchExp').value || null,
+  };
+  if (!batch.item_id || !batch.batch_number || !batch.qty_produced) { document.getElementById('m_batchMsg').innerHTML = '<span class="msg-error">الحقول المطلوبة ناقصة</span>'; return; }
+  const result = await BatchUIClient.create(currentCompanyId, batch);
+  if (!result.ok) { document.getElementById('m_batchMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal(); showToast('تم إضافة التشغيلة'); renderBatch();
+}
+
+/* ---------- مرفقات المستندات (Documents) ---------- */
+async function renderDocs() {
+  const result = await DocumentsUIClient.list(currentCompanyId);
+  const docs = result.ok ? result.docs : [];
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('📎','مرفقات المستندات', docs.length + ' مستند')}
+      <div class="toolbar"><div class="spacer"></div><button class="btn-gold" onclick="openAddDocModal()">+ إضافة مرفق</button></div>
+      <table>
+        <thead><tr><th>الاسم</th><th>التصنيف</th><th>مرتبط بـ</th><th>تاريخ الرفع</th><th>معتمد؟</th></tr></thead>
+        <tbody>
+          ${docs.map(d => `<tr><td>${d.file_name}</td><td>${d.category}</td><td>${d.entity_type}</td><td>${new Date(d.created_at).toLocaleDateString('ar-KW')}</td><td>${d.approved?'✅':'—'}</td></tr>`).join('') || '<tr><td colspan="5" class="empty-state">لا توجد مرفقات بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+function openAddDocModal() {
+  openModal('➕ إضافة مرفق', `
+    <label>اسم الملف *</label><input id="m_docName">
+    <label>التصنيف</label>
+    <select id="m_docCat"><option>عقد</option><option>فاتورة</option><option>سند</option><option>شهادة</option><option>مراسلة</option></select>
+    <label>مرتبط بـ (النوع)</label><input id="m_docEntityType" placeholder="customer / supplier / employee">
+    <p style="font-size:11px;color:var(--ink-mute)">⚠️ رفع الملف الفعلي يحتاج Supabase Storage — هذا يسجّل البيانات الوصفية فقط حاليًا</p>
+    <div id="m_docMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitAddDoc()">حفظ</button></div>
+  `);
+}
+async function submitAddDoc() {
+  const doc = {
+    file_name: document.getElementById('m_docName').value,
+    category: document.getElementById('m_docCat').value,
+    entity_type: document.getElementById('m_docEntityType').value || 'general',
+  };
+  if (!doc.file_name) { document.getElementById('m_docMsg').innerHTML = '<span class="msg-error">اسم الملف مطلوب</span>'; return; }
+  const result = await DocumentsUIClient.create(currentCompanyId, doc);
+  if (!result.ok) { document.getElementById('m_docMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal(); showToast('تم إضافة المرفق'); renderDocs();
+}
+
+/* ---------- تحليلات CLV ---------- */
+async function renderAnalytics() {
+  const result = await AnalyticsUIClient.clv(currentCompanyId);
+  const rows = result.ok ? result.rows : [];
+  const segColors = { VIP: '#d4af37', Gold: '#2563a8', Silver: '#7d4f9e', Bronze: '#8a93a6' };
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('🎯','تحليلات قيمة العميل (CLV)')}
+      <table>
+        <thead><tr><th>العميل</th><th>متوسط الفاتورة</th><th>القيمة المُقدَّرة</th><th>الشريحة</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `<tr><td>${r.name}</td><td>${r.avg_order_value.toFixed(3)}</td><td><strong>${r.estimated_clv.toFixed(3)}</strong></td>
+            <td><span class="ec-badge" style="background:${segColors[r.segment]}22;color:${segColors[r.segment]}">${r.segment}</span></td></tr>`).join('') || '<tr><td colspan="4" class="empty-state">لا توجد بيانات كافية</td></tr>'}
+        </tbody>
+      </table>
+      <p style="font-size:11px;color:var(--ink-mute);margin-top:10px">⚠️ تقدير مبدئي بمعادلة عامة (هامش ربح افتراضي 40%) — يحتاج ضبط لكل شركة حسب بياناتها الفعلية</p>
+    </div>`;
+}
+
+/* ---------- الإعدادات ---------- */
+async function renderSettings() {
+  const result = await SettingsUIClient.getCompany(currentCompanyId);
+  const company = result.ok ? result.company : {};
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('💾','إعدادات الشركة')}
+      <div class="card" style="max-width:500px">
+        <label>اسم الشركة (عربي)</label><input id="s_nameAr" value="${company.name_ar||''}">
+        <label>اسم الشركة (إنجليزي)</label><input id="s_nameEn" value="${company.name_en||''}">
+        <label>العنوان</label><input id="s_address" value="${company.address||''}">
+        <label>التليفون</label><input id="s_phone" value="${company.phone||''}">
+        <label>الإيميل</label><input id="s_email" value="${company.email||''}">
+        <label>الرقم الضريبي</label><input id="s_taxNumber" value="${company.tax_number||''}">
+        <label>السجل التجاري</label><input id="s_crNumber" value="${company.cr_number||''}">
+        <br><br>
+        <button class="btn-gold" onclick="submitSettings()">حفظ الإعدادات</button>
+        <div id="settingsMsg" style="margin-top:8px"></div>
+      </div>
+    </div>`;
+}
+async function submitSettings() {
+  const fields = {
+    name_ar: document.getElementById('s_nameAr').value, name_en: document.getElementById('s_nameEn').value,
+    address: document.getElementById('s_address').value, phone: document.getElementById('s_phone').value,
+    email: document.getElementById('s_email').value, tax_number: document.getElementById('s_taxNumber').value,
+    cr_number: document.getElementById('s_crNumber').value,
+  };
+  const result = await SettingsUIClient.updateCompany(currentCompanyId, fields);
+  if (!result.ok) { document.getElementById('settingsMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  showToast('تم حفظ الإعدادات بنجاح');
 }
 
 

@@ -796,3 +796,155 @@ const AgingClient = {
     return { ok: true, rows: data };
   }
 };
+// ============================================================
+// 🆕 Clients للأجزاء الناقصة (البناء الثاني) — تُضاف فى آخر supabase-client.js
+// ============================================================
+
+const LedgerClient = {
+  async trialBalance(companyId) {
+    const { data, error } = await supabaseClient.from('trial_balance').select('*').eq('company_id', companyId).order('code');
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, rows: data };
+  },
+  async journalEntries(companyId, limit = 50) {
+    const { data, error } = await supabaseClient.from('journal_entries')
+      .select('*, journal_entry_lines(*, chart_of_accounts(code, name_ar))')
+      .eq('company_id', companyId).order('entry_date', { ascending: false }).limit(limit);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, entries: data };
+  },
+  async chartOfAccounts(companyId) {
+    const { data, error } = await supabaseClient.from('chart_of_accounts').select('*').eq('company_id', companyId).order('code');
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, accounts: data };
+  }
+};
+
+const BudgetUIClient = {
+  async listBudgets(companyId) {
+    const { data, error } = await supabaseClient.from('budgets').select('*').eq('company_id', companyId).order('fiscal_year', { ascending: false });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, budgets: data };
+  },
+  async createBudget(companyId, year, scenario, scenarioName) {
+    const { data, error } = await supabaseClient.from('budgets')
+      .insert({ company_id: companyId, fiscal_year: year, scenario, scenario_name: scenarioName })
+      .select().single();
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, budget: data };
+  },
+  async addLine(budgetId, accountId, q1, q2, q3, q4) {
+    const { error } = await supabaseClient.from('budget_lines')
+      .insert({ budget_id: budgetId, account_id: accountId, q1_amount: q1, q2_amount: q2, q3_amount: q3, q4_amount: q4 });
+    return { ok: !error, error: error?.message };
+  },
+  async vsActual(companyId, year, scenario) {
+    const { data, error } = await supabaseClient.from('budget_vs_actual').select('*').eq('company_id', companyId).eq('fiscal_year', year).eq('scenario', scenario || 'base');
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, rows: data };
+  }
+};
+
+const FxUIClient = {
+  async listRates(companyId) {
+    const { data, error } = await supabaseClient.from('fx_rates').select('*').eq('company_id', companyId).order('currency_code');
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, rates: data };
+  },
+  async updateRate(companyId, currencyCode, newRate) {
+    const { error } = await supabaseClient.from('fx_rates').insert({ company_id: companyId, currency_code: currencyCode, rate_to_base: newRate });
+    return { ok: !error, error: error?.message };
+  },
+  async listOpenItems(companyId) {
+    const { data, error } = await supabaseClient.from('fx_open_items').select('*').eq('company_id', companyId).eq('is_settled', false);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, items: data };
+  },
+  async revalue(itemId, newRate) {
+    const { data, error } = await supabaseClient.rpc('revalue_fx_item', { p_fx_open_item_id: itemId, p_new_rate: newRate });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, ...data };
+  }
+};
+
+const WorkflowUIClient = {
+  async listTemplates(companyId) {
+    const { data, error } = await supabaseClient.from('workflow_templates').select('*, workflow_steps(*)').eq('company_id', companyId);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, templates: data };
+  },
+  async listRequests(companyId) {
+    const { data, error } = await supabaseClient.from('approval_requests').select('*, workflow_templates(name)').eq('company_id', companyId).order('created_at', { ascending: false });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, requests: data };
+  },
+  async act(requestId, actorUserId, action, notes) {
+    const { data, error } = await supabaseClient.rpc('act_on_approval', { p_approval_request_id: requestId, p_actor_user_id: actorUserId, p_action: action, p_notes: notes });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, ...data };
+  }
+};
+
+const WarehouseUIClient = {
+  async valuation(companyId) {
+    const { data, error } = await supabaseClient.from('inventory_valuation').select('*').eq('company_id', companyId).order('total_value', { ascending: false });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, rows: data };
+  },
+  async costVariance(companyId) {
+    const { data, error } = await supabaseClient.from('cost_variance_report').select('*').eq('company_id', companyId);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, rows: data };
+  }
+};
+
+const BatchUIClient = {
+  async list(companyId) {
+    const { data, error } = await supabaseClient.from('item_batches').select('*, items(name)').eq('company_id', companyId).order('expiry_date');
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, batches: data };
+  },
+  async create(companyId, batch) {
+    const { data, error } = await supabaseClient.from('item_batches').insert({ company_id: companyId, ...batch }).select().single();
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, batch: data };
+  },
+  async expiringAlert(companyId) {
+    const { data, error } = await supabaseClient.from('expiring_batches_alert').select('*').eq('company_id', companyId);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, rows: data };
+  }
+};
+
+const DocumentsUIClient = {
+  async list(companyId) {
+    const { data, error } = await supabaseClient.from('document_attachments').select('*').eq('company_id', companyId).order('created_at', { ascending: false });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, docs: data };
+  },
+  async create(companyId, doc) {
+    const { data, error } = await supabaseClient.from('document_attachments').insert({ company_id: companyId, ...doc }).select().single();
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, doc: data };
+  }
+};
+
+const AnalyticsUIClient = {
+  async clv(companyId) {
+    const { data, error } = await supabaseClient.from('customer_clv').select('*').eq('company_id', companyId).order('estimated_clv', { ascending: false });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, rows: data };
+  }
+};
+
+const SettingsUIClient = {
+  async getCompany(companyId) {
+    const { data, error } = await supabaseClient.from('companies').select('*').eq('id', companyId).single();
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, company: data };
+  },
+  async updateCompany(companyId, fields) {
+    const { error } = await supabaseClient.from('companies').update(fields).eq('id', companyId);
+    return { ok: !error, error: error?.message };
+  }
+};
