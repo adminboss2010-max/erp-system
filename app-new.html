@@ -1174,6 +1174,11 @@ async function renderCustomerStatement() {
 
 const CURRENCY_LABELS = { KWD: 'د.ك', SAR: 'ر.س', USD: '$', EUR: '€', AED: 'د.إ', EGP: 'ج.م', GBP: '£', JOD: 'د.أ' };
 function currencyLabel(code) { return CURRENCY_LABELS[code] || code || 'د.ك'; }
+function printLogoHtml(company) {
+  if (company?.logo_url) return `<img src="${company.logo_url}" style="width:70px;height:70px;border-radius:10px;object-fit:cover">`;
+  const initial = (company?.name_ar || 'p').trim().charAt(0) || 'p';
+  return `<div class="ph-logo-ph">${initial}</div>`;
+}
 
 async function printCustomerStatement() {
   const customerId = getSearchSelectValue('stCust');
@@ -1181,10 +1186,8 @@ async function printCustomerStatement() {
   const { custResult, rows, openingBalance, closingBalance, fromDate, toDate } = window._lastStatementData;
 
   const { data: company } = await supabaseClient.from('companies')
-    .select('name_ar, name_en, tax_number, cr_number, address, phone, currency').eq('id', currentCompanyId).single();
+    .select('name_ar, name_en, tax_number, cr_number, address, phone, currency, logo_url').eq('id', currentCompanyId).single();
   const curr = currencyLabel(company?.currency);
-
-  const logoInitial = (company?.name_ar || 'p').trim().charAt(0) || 'p';
   const now = new Date().toLocaleString('ar-KW', { dateStyle: 'medium', timeStyle: 'short' });
   const metaLines = [];
   if (company?.cr_number) metaLines.push('س.ت: ' + company.cr_number);
@@ -1220,7 +1223,7 @@ async function printCustomerStatement() {
     @media print{ body{padding:8px} }
   </style></head><body>
   <div class="ph-row">
-    <div class="ph-logo-ph">${logoInitial}</div>
+    ${printLogoHtml(company)}
     <div class="ph-names">
       <div class="ph-name-ar">${company?.name_ar||'اسم الشركة'}</div>
       ${company?.name_en ? `<div class="ph-name-en">${company.name_en}</div>` : ''}
@@ -1593,7 +1596,6 @@ async function printDocument(docType, docNo) {
     </tr>`).join('') : `
     <tr><td colspan="5">قيمة السند المستلمة نقدًا/بنكيًا</td><td class="num"><b>${doc.grandTotal.toFixed(3)}</b></td></tr>`;
 
-  const logoInitial = (doc.company?.name_ar || 'p').trim().charAt(0) || 'p';
   const now = new Date().toLocaleString('ar-KW', { dateStyle: 'medium', timeStyle: 'short' });
   const metaLines = [];
   if (doc.company?.cr_number) metaLines.push('س.ت: ' + doc.company.cr_number);
@@ -1665,7 +1667,7 @@ async function printDocument(docType, docNo) {
 <body>
 
 <div class="ph-row">
-  <div class="ph-logo-wrap"><div class="ph-logo-ph">${logoInitial}</div></div>
+  <div class="ph-logo-wrap">${printLogoHtml(doc.company)}</div>
   <div class="ph-names">
     <div class="ph-name-ar">${doc.company?.name_ar || 'اسم الشركة'}</div>
     ${doc.company?.name_en ? `<div class="ph-name-en">${doc.company.name_en}</div>` : ''}
@@ -2737,6 +2739,17 @@ async function renderSettings() {
       ${viewHeader('💾','إعدادات الشركة')}
       ${!isOwner ? '<p style="font-size:12px;color:var(--ink-mute)">تعديل بيانات الشركة متاح لمالك الشركة فقط — القيم الحالية للعرض فقط</p>' : ''}
       <div class="card" style="max-width:500px">
+        <label>شعار الشركة</label>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px">
+          <img id="s_logoPreview" src="${company.logo_url||''}" style="width:64px;height:64px;border-radius:10px;object-fit:cover;background:var(--paper);border:1px solid var(--line);${company.logo_url?'':'display:none'}">
+          ${isOwner ? `
+          <div>
+            <input type="file" id="s_logoFile" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="font-size:12px" onchange="uploadCompanyLogo(this.files[0])">
+            <div id="s_logoMsg" style="font-size:11px;margin-top:4px"></div>
+          </div>` : (company.logo_url ? '' : '<span style="font-size:12px;color:var(--ink-mute)">لا يوجد شعار مرفوع</span>')}
+        </div>
+      </div>
+      <div class="card" style="max-width:500px">
         <label>اسم الشركة (عربي)</label><input id="s_nameAr" value="${company.name_ar||''}" ${ro}>
         <label>اسم الشركة (إنجليزي)</label><input id="s_nameEn" value="${company.name_en||''}" ${ro}>
         <label>العنوان</label><input id="s_address" value="${company.address||''}" ${ro}>
@@ -2760,6 +2773,18 @@ async function submitSettings() {
   const result = await SettingsUIClient.updateCompany(currentCompanyId, fields);
   if (!result.ok) { document.getElementById('settingsMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
   showToast('تم حفظ الإعدادات بنجاح');
+}
+async function uploadCompanyLogo(file) {
+  if (!file) return;
+  if (file.size > 1024 * 1024) { document.getElementById('s_logoMsg').innerHTML = '<span class="msg-error">حجم الصورة أكبر من 1 ميجا</span>'; return; }
+  document.getElementById('s_logoMsg').textContent = 'جاري الرفع...';
+  const result = await SettingsUIClient.uploadLogo(currentCompanyId, file);
+  if (!result.ok) { document.getElementById('s_logoMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  document.getElementById('s_logoMsg').textContent = '';
+  const preview = document.getElementById('s_logoPreview');
+  preview.src = result.logoUrl;
+  preview.style.display = '';
+  showToast('تم رفع الشعار بنجاح');
 }
 
 

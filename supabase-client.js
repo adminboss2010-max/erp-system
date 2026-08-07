@@ -976,6 +976,17 @@ const SettingsUIClient = {
   async updateCompany(companyId, fields) {
     const { error } = await supabaseClient.from('companies').update(fields).eq('id', companyId);
     return { ok: !error, error: error?.message };
+  },
+  async uploadLogo(companyId, file) {
+    const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+    const path = `${companyId}/logo.${ext}`;
+    const { error: upErr } = await supabaseClient.storage.from('company-logos').upload(path, file, { upsert: true });
+    if (upErr) return { ok: false, error: upErr.message };
+    const { data: pub } = supabaseClient.storage.from('company-logos').getPublicUrl(path);
+    const logoUrl = pub.publicUrl + '?t=' + Date.now();
+    const { error: updErr } = await supabaseClient.from('companies').update({ logo_url: logoUrl }).eq('id', companyId);
+    if (updErr) return { ok: false, error: updErr.message };
+    return { ok: true, logoUrl };
   }
 };
 // ============================================================
