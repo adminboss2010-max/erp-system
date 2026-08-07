@@ -71,6 +71,9 @@
   }
   .entity-card .ec-badge.warn{ background:#fef3c7; color:#92400e }
   .entity-card .ec-badge.danger{ background:var(--danger-soft); color:var(--danger) }
+  .entity-card.is-inactive{ opacity:.5 }
+  .entity-card .ec-actions{ display:flex; gap:6px; margin-top:10px }
+  .entity-card .ec-actions button{ font-size:11px; padding:3px 9px }
 
   .modal-overlay{
     position:fixed; inset:0; background:rgba(10,19,38,0.45); display:none;
@@ -496,11 +499,13 @@ async function renderDashboard() {
 async function renderCustomers() {
   const result = await CustomersClient.list(currentCompanyId);
   cache.customers = result.ok ? result.customers : [];
+  const activeCount = cache.customers.filter(c => c.is_active !== false).length;
   document.getElementById('mainContent').innerHTML = `
     <div class="view-fade">
-      ${viewHeader('👥','العملاء', cache.customers.length + ' عميل مسجّل')}
+      ${viewHeader('👥','العملاء', activeCount + ' عميل مسجّل')}
       <div class="toolbar">
         <input class="filter-input" id="custFilter" placeholder="🔍 ابحث بالاسم أو الكود..." oninput="renderCustomersGrid(this.value)">
+        <label style="font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:4px;white-space:nowrap"><input type="checkbox" id="custShowInactive" onchange="renderCustomersGrid(document.getElementById('custFilter').value)"> إظهار الموقوفين</label>
         <div class="spacer"></div>
         <button class="btn-gold" onclick="openAddCustomerModal()">+ إضافة عميل</button>
       </div>
@@ -510,13 +515,18 @@ async function renderCustomers() {
 }
 function renderCustomersGrid(filter) {
   const f = (filter||'').toLowerCase();
-  const filtered = cache.customers.filter(c => !f || c.name.toLowerCase().includes(f) || (c.code||'').toLowerCase().includes(f));
+  const showInactive = document.getElementById('custShowInactive')?.checked;
+  const filtered = cache.customers.filter(c => (showInactive || c.is_active !== false) && (!f || c.name.toLowerCase().includes(f) || (c.code||'').toLowerCase().includes(f)));
   document.getElementById('custGrid').innerHTML = filtered.map(c => `
-    <div class="entity-card">
+    <div class="entity-card ${c.is_active===false?'is-inactive':''}">
       <div class="ec-top"><div class="ec-name">${c.name}</div><div class="ec-code">${c.code||'—'}</div></div>
       <div class="ec-line"><span>📞 ${c.phone||'—'}</span></div>
       <div class="ec-line"><span>📍 ${c.address||'—'}</span></div>
       <div class="ec-badge ${c.balance>0?'warn':''}">الرصيد: ${(c.balance||0).toFixed(3)} د.ك</div>
+      <div class="ec-actions">
+        <button onclick="openEditCustomerModal('${c.id}')">✏️ تعديل</button>
+        <button onclick="toggleCustomerActive('${c.id}', ${c.is_active===false})">${c.is_active===false?'♻️ إعادة تفعيل':'⛔ إيقاف'}</button>
+      </div>
     </div>`).join('') || '<div class="empty-state">لا يوجد عملاء مطابقين</div>';
 }
 function openAddCustomerModal() {
@@ -541,6 +551,38 @@ async function submitAddCustomer() {
   if (!result.ok) { document.getElementById('m_custMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
   closeModal();
   showToast('تم إضافة العميل بنجاح');
+  renderCustomers();
+}
+function openEditCustomerModal(customerId) {
+  const c = cache.customers.find(x => x.id === customerId);
+  if (!c) return;
+  openModal('✏️ تعديل بيانات العميل', `
+    <label>الكود</label><input id="m_custEditCode" value="${c.code||''}">
+    <label>الاسم *</label><input id="m_custEditName" value="${c.name||''}">
+    <label>التليفون</label><input id="m_custEditPhone" value="${c.phone||''}">
+    <label>العنوان</label><input id="m_custEditAddress" value="${c.address||''}">
+    <div id="m_custEditMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitEditCustomer('${c.id}')">حفظ التعديلات</button></div>
+  `);
+}
+async function submitEditCustomer(customerId) {
+  const fields = {
+    code: document.getElementById('m_custEditCode').value,
+    name: document.getElementById('m_custEditName').value,
+    phone: document.getElementById('m_custEditPhone').value,
+    address: document.getElementById('m_custEditAddress').value,
+  };
+  if (!fields.name) { document.getElementById('m_custEditMsg').innerHTML = '<span class="msg-error">الاسم مطلوب</span>'; return; }
+  const result = await CustomersClient.update(customerId, fields);
+  if (!result.ok) { document.getElementById('m_custEditMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal();
+  showToast('تم حفظ تعديلات العميل');
+  renderCustomers();
+}
+async function toggleCustomerActive(customerId, reactivate) {
+  const result = await CustomersClient.update(customerId, { is_active: reactivate });
+  if (!result.ok) { showToast(result.error, 'error'); return; }
+  showToast(reactivate ? 'تم إعادة تفعيل العميل' : 'تم إيقاف العميل');
   renderCustomers();
 }
 
@@ -597,11 +639,13 @@ async function submitAddAgent() {
 async function renderItems() {
   const result = await ItemsClient.list(currentCompanyId);
   cache.items = result.ok ? result.items : [];
+  const activeCount = cache.items.filter(i => i.is_active !== false).length;
   document.getElementById('mainContent').innerHTML = `
     <div class="view-fade">
-      ${viewHeader('📦','الأصناف', cache.items.length + ' صنف')}
+      ${viewHeader('📦','الأصناف', activeCount + ' صنف')}
       <div class="toolbar">
         <input class="filter-input" id="itFilter" placeholder="🔍 ابحث بالاسم أو الكود..." oninput="renderItemsGrid(this.value)">
+        <label style="font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:4px;white-space:nowrap"><input type="checkbox" id="itShowInactive" onchange="renderItemsGrid(document.getElementById('itFilter').value)"> إظهار الموقوف</label>
         <div class="spacer"></div>
         <button onclick="window.location.href='import-items.html'">📥 استيراد من إكسل</button>
         <button class="btn-gold" onclick="openAddItemModal()">+ إضافة صنف</button>
@@ -612,12 +656,17 @@ async function renderItems() {
 }
 function renderItemsGrid(filter) {
   const f = (filter||'').toLowerCase();
-  const filtered = cache.items.filter(i => !f || i.name.toLowerCase().includes(f) || (i.code||'').toLowerCase().includes(f));
+  const showInactive = document.getElementById('itShowInactive')?.checked;
+  const filtered = cache.items.filter(i => (showInactive || i.is_active !== false) && (!f || i.name.toLowerCase().includes(f) || (i.code||'').toLowerCase().includes(f)));
   document.getElementById('itGrid').innerHTML = filtered.map(i => `
-    <div class="entity-card">
+    <div class="entity-card ${i.is_active===false?'is-inactive':''}">
       <div class="ec-top"><div class="ec-name">${i.name}</div><div class="ec-code">${i.code||'—'}</div></div>
       <div class="ec-line"><span>تكلفة: ${(i.unit_cost||0).toFixed(3)}</span><span>بيع: ${(i.unit_price||0).toFixed(3)}</span></div>
       <div class="ec-badge ${((i.stock_qty||0)<5)?'danger':''}">المخزون: ${i.stock_qty||0}</div>
+      <div class="ec-actions">
+        <button onclick="openEditItemModal('${i.id}')">✏️ تعديل</button>
+        <button onclick="toggleItemActive('${i.id}', ${i.is_active===false})">${i.is_active===false?'♻️ إعادة تفعيل':'⛔ إيقاف'}</button>
+      </div>
     </div>`).join('') || '<div class="empty-state">لا يوجد أصناف مطابقة</div>';
 }
 function openAddItemModal() {
@@ -646,15 +695,48 @@ async function submitAddItem() {
   showToast('تم إضافة الصنف بنجاح');
   renderItems();
 }
+function openEditItemModal(itemId) {
+  const i = cache.items.find(x => x.id === itemId);
+  if (!i) return;
+  openModal('✏️ تعديل بيانات الصنف', `
+    <label>الكود *</label><input id="m_itEditCode" value="${i.code||''}">
+    <label>الاسم *</label><input id="m_itEditName" value="${i.name||''}">
+    <label>سعر البيع</label><input id="m_itEditPrice" type="number" step="0.001" value="${i.unit_price||0}">
+    <div style="font-size:11px;color:var(--ink-mute);margin-top:4px">تعديل التكلفة والكمية بيتم فقط عبر فاتورة مشتريات، لضمان صحة المتوسط المرجح وسجل حركة المخزون</div>
+    <div id="m_itEditMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitEditItem('${i.id}')">حفظ التعديلات</button></div>
+  `);
+}
+async function submitEditItem(itemId) {
+  const fields = {
+    code: document.getElementById('m_itEditCode').value,
+    name: document.getElementById('m_itEditName').value,
+    unit_price: parseFloat(document.getElementById('m_itEditPrice').value) || 0,
+  };
+  if (!fields.name || !fields.code) { document.getElementById('m_itEditMsg').innerHTML = '<span class="msg-error">الكود والاسم مطلوبين</span>'; return; }
+  const result = await ItemsClient.update(itemId, fields);
+  if (!result.ok) { document.getElementById('m_itEditMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal();
+  showToast('تم حفظ تعديلات الصنف');
+  renderItems();
+}
+async function toggleItemActive(itemId, reactivate) {
+  const result = await ItemsClient.update(itemId, { is_active: reactivate });
+  if (!result.ok) { showToast(result.error, 'error'); return; }
+  showToast(reactivate ? 'تم إعادة تفعيل الصنف' : 'تم إيقاف الصنف');
+  renderItems();
+}
 
 async function renderSuppliers() {
   const result = await SuppliersClient.list(currentCompanyId);
   cache.suppliers = result.ok ? result.suppliers : [];
+  const activeCount = cache.suppliers.filter(s => s.is_active !== false).length;
   document.getElementById('mainContent').innerHTML = `
     <div class="view-fade">
-      ${viewHeader('🚚','الموردين', cache.suppliers.length + ' مورد')}
+      ${viewHeader('🚚','الموردين', activeCount + ' مورد')}
       <div class="toolbar">
         <input class="filter-input" id="supFilter" placeholder="🔍 ابحث بالاسم..." oninput="renderSuppliersGrid(this.value)">
+        <label style="font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:4px;white-space:nowrap"><input type="checkbox" id="supShowInactive" onchange="renderSuppliersGrid(document.getElementById('supFilter').value)"> إظهار الموقوفين</label>
         <div class="spacer"></div>
         <button class="btn-gold" onclick="openAddSupplierModal()">+ إضافة مورد</button>
       </div>
@@ -664,13 +746,18 @@ async function renderSuppliers() {
 }
 function renderSuppliersGrid(filter) {
   const f = (filter||'').toLowerCase();
-  const filtered = cache.suppliers.filter(s => !f || s.name.toLowerCase().includes(f));
+  const showInactive = document.getElementById('supShowInactive')?.checked;
+  const filtered = cache.suppliers.filter(s => (showInactive || s.is_active !== false) && (!f || s.name.toLowerCase().includes(f)));
   document.getElementById('supGrid').innerHTML = filtered.map(s => `
-    <div class="entity-card">
+    <div class="entity-card ${s.is_active===false?'is-inactive':''}">
       <div class="ec-top"><div class="ec-name">${s.name}</div><div class="ec-code">${s.code||'—'}</div></div>
       <div class="ec-line"><span>📞 ${s.phone||'—'}</span></div>
       <div class="ec-line"><span>🧾 ${s.tax_number||'—'}</span></div>
       <div class="ec-badge">مستحق له: ${(s.balance||0).toFixed(3)} د.ك</div>
+      <div class="ec-actions">
+        <button onclick="openEditSupplierModal('${s.id}')">✏️ تعديل</button>
+        <button onclick="toggleSupplierActive('${s.id}', ${s.is_active===false})">${s.is_active===false?'♻️ إعادة تفعيل':'⛔ إيقاف'}</button>
+      </div>
     </div>`).join('') || '<div class="empty-state">لا يوجد موردين مطابقين</div>';
 }
 function openAddSupplierModal() {
@@ -695,6 +782,38 @@ async function submitAddSupplier() {
   if (!result.ok) { document.getElementById('m_supMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
   closeModal();
   showToast('تم إضافة المورد بنجاح');
+  renderSuppliers();
+}
+function openEditSupplierModal(supplierId) {
+  const s = cache.suppliers.find(x => x.id === supplierId);
+  if (!s) return;
+  openModal('✏️ تعديل بيانات المورد', `
+    <label>الكود</label><input id="m_supEditCode" value="${s.code||''}">
+    <label>الاسم *</label><input id="m_supEditName" value="${s.name||''}">
+    <label>التليفون</label><input id="m_supEditPhone" value="${s.phone||''}">
+    <label>الرقم الضريبي (اختياري)</label><input id="m_supEditTax" value="${s.tax_number||''}">
+    <div id="m_supEditMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitEditSupplier('${s.id}')">حفظ التعديلات</button></div>
+  `);
+}
+async function submitEditSupplier(supplierId) {
+  const fields = {
+    code: document.getElementById('m_supEditCode').value,
+    name: document.getElementById('m_supEditName').value,
+    phone: document.getElementById('m_supEditPhone').value,
+    tax_number: document.getElementById('m_supEditTax').value,
+  };
+  if (!fields.name) { document.getElementById('m_supEditMsg').innerHTML = '<span class="msg-error">الاسم مطلوب</span>'; return; }
+  const result = await SuppliersClient.update(supplierId, fields);
+  if (!result.ok) { document.getElementById('m_supEditMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal();
+  showToast('تم حفظ تعديلات المورد');
+  renderSuppliers();
+}
+async function toggleSupplierActive(supplierId, reactivate) {
+  const result = await SuppliersClient.update(supplierId, { is_active: reactivate });
+  if (!result.ok) { showToast(result.error, 'error'); return; }
+  showToast(reactivate ? 'تم إعادة تفعيل المورد' : 'تم إيقاف المورد');
   renderSuppliers();
 }
 

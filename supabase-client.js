@@ -134,6 +134,17 @@ const ItemsClient = {
       .single();
     if (error) return { ok: false, error: error.message };
     return { ok: true, item: data };
+  },
+
+  async update(itemId, fields) {
+    const { data, error } = await supabaseClient
+      .from('items')
+      .update(fields)
+      .eq('id', itemId)
+      .select()
+      .single();
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, item: data };
   }
 };
 
@@ -224,6 +235,17 @@ const SuppliersClient = {
     const { data, error } = await supabaseClient
       .from('suppliers')
       .insert({ company_id: companyId, ...supplier })
+      .select()
+      .single();
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, supplier: data };
+  },
+
+  async update(supplierId, fields) {
+    const { data, error } = await supabaseClient
+      .from('suppliers')
+      .update(fields)
+      .eq('id', supplierId)
       .select()
       .single();
     if (error) return { ok: false, error: error.message };
