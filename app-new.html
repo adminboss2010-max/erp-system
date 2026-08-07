@@ -300,6 +300,7 @@
     <div class="side-group">
       <div class="side-mod" data-mod="settings" onclick="toggleMod('settings')"><span class="side-mod-ico">⚙️</span><span class="side-mod-lbl">الإدارة والاختبار</span><span class="side-caret">▾</span></div>
       <div class="side-items" data-moditems="settings">
+        <a class="sidebar-link" data-view="team" onclick="switchView('team')"><span class="ic">👥</span> فريق العمل</a>
         <a class="sidebar-link" data-view="settings" onclick="switchView('settings')"><span class="ic">💾</span> الإعدادات</a>
         <a class="sidebar-link" data-view="settingsFull" onclick="switchView('settingsFull')"><span class="ic">🎨</span> الإعدادات المتقدمة</a>
       </div>
@@ -315,6 +316,8 @@
 <script src="supabase-client.js"></script>
 <script>
 let currentCompanyId = null;
+let currentUserId = null;
+let currentUserRole = null;
 let cache = { customers: [], agents: [], items: [], suppliers: [] };
 let saleLineItem = null;
 let purchaseLineItem = null;
@@ -432,6 +435,8 @@ async function init() {
     return;
   }
   currentCompanyId = companyInfo.company_id;
+  currentUserId = user.id;
+  currentUserRole = companyInfo.role;
   document.getElementById('companyNameDisplay').textContent = (companyInfo.companies?.name_ar || '') + ' — ' + user.email;
   document.getElementById('sidebarNav').classList.remove('sidebar-locked');
   switchView('dashboard');
@@ -457,6 +462,7 @@ async function switchView(viewName) {
     periodCompare: renderPeriodCompare, forecast: renderForecast, offers: renderOffers, reports: renderReports,
     whOverview: renderWhOverview, whItems: renderWhItems, whMovements: renderWhMovements, whCost: renderWhCost,
     workflow: renderWorkflowAdmin, settingsFull: renderSettingsFull, mobile: renderMobile, portalInfo: renderPortalInfo,
+    team: renderTeam,
   };
   try { await renderers[viewName](); }
   catch (e) { document.getElementById('mainContent').innerHTML = `<div class="empty-state msg-error">خطأ: ${e.message}</div>`; }
@@ -2493,6 +2499,68 @@ async function renderAnalytics() {
       </table>
       <p style="font-size:11px;color:var(--ink-mute);margin-top:10px">⚠️ تقدير مبدئي بمعادلة عامة (هامش ربح افتراضي 40%) — يحتاج ضبط لكل شركة حسب بياناتها الفعلية</p>
     </div>`;
+}
+
+/* ---------- فريق العمل ---------- */
+async function renderTeam() {
+  const result = await TeamClient.list(currentCompanyId);
+  const members = result.ok ? result.members : [];
+  const roleLabel = { owner: 'مالك', manager: 'مدير', staff: 'موظف' };
+  const isOwner = currentUserRole === 'owner';
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('👥','فريق العمل', members.length + ' عضو')}
+      ${isOwner ? `
+      <div class="toolbar">
+        <input class="filter-input" id="teamInviteEmail" placeholder="إيميل مستخدم عنده حساب بالفعل فى النظام...">
+        <select id="teamInviteRole" style="flex:0 0 130px">
+          <option value="staff">موظف</option>
+          <option value="manager">مدير</option>
+          <option value="owner">مالك</option>
+        </select>
+        <button class="btn-gold" onclick="submitInviteTeamMember()">+ إضافة عضو</button>
+      </div>
+      <div id="teamInviteMsg" style="margin-bottom:10px"></div>
+      ` : '<p style="font-size:12px;color:var(--ink-mute)">إضافة/إزالة الأعضاء وتغيير الأدوار متاحة لمالك الشركة فقط</p>'}
+      <table>
+        <thead><tr><th>الإيميل</th><th>الدور</th><th>انضم بتاريخ</th>${isOwner ? '<th></th>' : ''}</tr></thead>
+        <tbody>
+          ${members.map(m => `
+            <tr>
+              <td>${m.email}${m.user_id===currentUserId?' <span class="ec-badge">أنت</span>':''}</td>
+              <td>${isOwner ? `
+                <select onchange="submitChangeTeamRole('${m.user_id}', this.value)">
+                  <option value="staff" ${m.role==='staff'?'selected':''}>موظف</option>
+                  <option value="manager" ${m.role==='manager'?'selected':''}>مدير</option>
+                  <option value="owner" ${m.role==='owner'?'selected':''}>مالك</option>
+                </select>` : (roleLabel[m.role] || m.role)}</td>
+              <td>${(m.created_at||'').slice(0,10)}</td>
+              ${isOwner ? `<td><button onclick="submitRemoveTeamMember('${m.user_id}')">🗑️ إزالة</button></td>` : ''}
+            </tr>`).join('') || `<tr><td colspan="${isOwner?4:3}" class="empty-state">لا يوجد أعضاء</td></tr>`}
+        </tbody>
+      </table>
+    </div>`;
+}
+async function submitInviteTeamMember() {
+  const email = document.getElementById('teamInviteEmail').value.trim();
+  const role = document.getElementById('teamInviteRole').value;
+  if (!email) { document.getElementById('teamInviteMsg').innerHTML = '<span class="msg-error">اكتب الإيميل الأول</span>'; return; }
+  const result = await TeamClient.invite(currentCompanyId, email, role);
+  if (!result.ok) { document.getElementById('teamInviteMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  showToast('تم إضافة العضو بنجاح');
+  renderTeam();
+}
+async function submitChangeTeamRole(targetUserId, newRole) {
+  const result = await TeamClient.updateRole(currentCompanyId, targetUserId, newRole);
+  if (!result.ok) { showToast(result.error, 'error'); }
+  else { showToast('تم تحديث الدور'); }
+  renderTeam();
+}
+async function submitRemoveTeamMember(targetUserId) {
+  const result = await TeamClient.remove(currentCompanyId, targetUserId);
+  if (!result.ok) { showToast(result.error, 'error'); return; }
+  showToast('تم إزالة العضو من الشركة');
+  renderTeam();
 }
 
 /* ---------- الإعدادات ---------- */

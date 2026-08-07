@@ -1107,3 +1107,26 @@ const FieldVisitsClient = {
     return { ok: !error, error: error?.message };
   }
 };
+
+const TeamClient = {
+  async list(companyId) {
+    const { data, error } = await supabaseClient.rpc('list_company_team', { p_company_id: companyId });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, members: data };
+  },
+  async invite(companyId, email, role) {
+    const { data, error } = await supabaseClient.rpc('invite_user_to_company', { p_company_id: companyId, p_email: email, p_role: role });
+    if (error) return { ok: false, error: error.message };
+    return data;
+  },
+  async updateRole(companyId, targetUserId, newRole) {
+    const { data, error } = await supabaseClient.rpc('update_team_member_role', { p_company_id: companyId, p_target_user_id: targetUserId, p_new_role: newRole });
+    if (error) return { ok: false, error: error.message };
+    return data;
+  },
+  async remove(companyId, targetUserId) {
+    const { data, error } = await supabaseClient.rpc('remove_team_member', { p_company_id: companyId, p_target_user_id: targetUserId });
+    if (error) return { ok: false, error: error.message };
+    return data;
+  }
+};
