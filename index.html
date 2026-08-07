@@ -518,12 +518,12 @@
     <section class="brand-hero">
       <span class="eyebrow"><span class="dot"></span>نظام تشغيل موحّد للشركات</span>
       <h1>أدر شركتك<br>بمنطق <span class="accent">واحد متين</span></h1>
-      <p>حساب مستقل لكل شركة، شيت بيانات خاص بيك، وفريق متعدد المستخدمين — كل ده على منصة واحدة مبنية على Google Sheets كقاعدة بيانات مرنة وآمنة.</p>
+      <p>حساب مستقل لكل شركة، قاعدة بيانات خاصة بيك، وفريق متعدد المستخدمين — كل ده على منصة واحدة مبنية على بنية سحابية حديثة وآمنة.</p>
 
       <div class="brand-features">
         <div class="feature">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-          <div><strong>قاعدة بيانات مستقلة</strong>شيت منفصل لكل شركة</div>
+          <div><strong>قاعدة بيانات مستقلة</strong>عزل كامل لبيانات كل شركة</div>
         </div>
         <div class="feature">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -574,8 +574,9 @@
         <p id="formSubtitle">سجّل دخولك للمتابعة إلى لوحة التحكم، أو أنشئ حساب جديد لشركتك.</p>
       </div>
 
-      <div class="tabs" role="tablist" style="display:none">
+      <div class="tabs" role="tablist">
         <div class="tab active" data-tab="login" role="tab" aria-selected="true">تسجيل الدخول</div>
+        <div class="tab" data-tab="register" role="tab" aria-selected="false">إنشاء حساب جديد</div>
       </div>
 
       <!-- Login form -->
@@ -598,7 +599,7 @@
           </div>
         </div>
         <div class="row-between">
-          <label><input type="checkbox" id="rememberMe" checked> تذكّرني</label>
+          <span></span>
           <a href="#reset" id="forgotLink">نسيت كلمة المرور؟</a>
         </div>
         <button class="primary" type="submit" id="loginBtn">
@@ -606,47 +607,66 @@
         </button>
       </form>
 
-      <!-- Register form: اتشال — إنشاء الشركات بقى صلاحية أدمن بس (عن طريق admin.html) -->
+      <!-- Register form -->
+      <form id="registerForm" autocomplete="on" novalidate style="display:none">
+        <div class="field">
+          <label for="regCompanyName">اسم الشركة</label>
+          <div class="input-wrap">
+            <input type="text" id="regCompanyName" name="company_name" placeholder="اسم شركتك بالعربي" required autocomplete="organization">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+          </div>
+        </div>
+        <div class="field">
+          <label for="regEmail">البريد الإلكتروني</label>
+          <div class="input-wrap">
+            <input type="email" id="regEmail" name="email" placeholder="name@company.com" required autocomplete="email">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>
+          </div>
+        </div>
+        <div class="field">
+          <label for="regPassword">كلمة المرور</label>
+          <div class="input-wrap">
+            <input type="password" id="regPassword" name="password" placeholder="8 أحرف على الأقل" required autocomplete="new-password" minlength="8">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <button type="button" class="toggle-pw" data-target="regPassword" aria-label="إظهار/إخفاء كلمة المرور">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="primary" type="submit" id="registerBtn">
+          <span class="btn-text">إنشاء حساب الشركة</span>
+        </button>
+      </form>
 
       <div class="msg" id="authMsg" role="status" aria-live="polite"></div>
 
-      <div class="form-foot">
-        ليس لديك حساب؟ تواصل مع إدارة المنصة لإنشاء حساب شركتك.<br>
+      <div class="form-foot" id="formFoot">
+        ليس لديك حساب؟ <a href="#" id="goRegister">أنشئ حساب شركتك الآن</a><br>
         محتاج مساعدة؟ <a href="#support">تواصل مع الدعم</a>
       </div>
     </div>
   </main>
 </div>
 
-<script src="config.js"></script>
-<script src="modules/02-sendtosentry.js"></script>
-<!-- 🛡️ لازم تتحمّل هنا (أول صفحة يزورها أي مستخدم، قبل تسجيل الدخول) لا في app.html فقط —
-     عشان مسح الـ localStorage الإجباري (مرة واحدة للأبد) يحصل قبل ما توكين الدخول يُكتب،
-     مش بعده. راجع modules/module-25.js -->
-<script src="modules/module-25.js"></script>
-<script src="version-check.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="api-client.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
 <script>
 // ===== Helpers =====
   const $ = (s, c=document) => c.querySelector(s);
   const $$ = (s, c=document) => Array.from(c.querySelectorAll(s));
 
-  // ===== Ping =====
+  // ===== Ping (فحص فعلي للاتصال بـ Supabase) =====
   (async function ping(){
     const pill = $('#pingPill');
     const text = $('#pingText');
     try {
-      const r = await ApiClient.auth.ping();
-      if (r.ok) { 
-        pill.className = 'status-pill ok'; 
-        text.textContent = 'متصل بالسيرفر'; 
-      } else {
-        throw new Error();
-      }
+      const { error } = await supabaseClient.from('companies').select('id', { head: true, count: 'exact' }).limit(1);
+      if (error) throw error;
+      pill.className = 'status-pill ok';
+      text.textContent = 'متصل بالسيرفر';
     } catch (e) {
-      pill.className = 'status-pill bad'; 
-      text.textContent = 'غير متصل — تحقّق من config.js';
+      pill.className = 'status-pill bad';
+      text.textContent = 'تعذّر الاتصال بالسيرفر';
     }
   })();
 
@@ -662,28 +682,24 @@
   function showMsg(text, type){
     const el = $('#authMsg');
     el.className = 'msg ' + type;
-    
-    // تنظيف المحتوى أولاً
     el.innerHTML = '';
-    
-    // إنشاء عنصر الأيقونة بناءً على النوع
+
     const svgNS = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(svgNS, "svg");
     svg.setAttribute("viewBox", "0 0 24 24");
     svg.setAttribute("fill", "none");
     svg.setAttribute("stroke", "currentColor");
     svg.setAttribute("stroke-width", "2");
-    
+
     if (type === 'error') {
       svg.innerHTML = '<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>';
     } else {
       svg.innerHTML = '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>';
     }
-    
-    // استخدام textContent حصراً لحقن النصوص لمنع الـ HTML Injection
+
     const span = document.createElement('span');
     span.textContent = text;
-    
+
     el.appendChild(svg);
     el.appendChild(span);
   }
@@ -705,78 +721,104 @@
     }
   }
 
-  // ===== Auth flow =====
-  function afterAuth(token, company){
-    localStorage.setItem('erp_token', token);
-    localStorage.setItem('erp_company', JSON.stringify(company));
-    window.location.href = './app.html';
+  // ===== Tabs (تسجيل دخول / حساب جديد) =====
+  const tabsCopy = {
+    login: { title: 'أهلاً بيك في prova', subtitle: 'سجّل دخولك للمتابعة إلى لوحة التحكم.' },
+    register: { title: 'أنشئ حساب شركتك', subtitle: 'تجربة مجانية 14 يوم، بدون بطاقة ائتمان.' },
+  };
+  function switchTab(name){
+    $$('.tab').forEach(t => { t.classList.toggle('active', t.dataset.tab === name); t.setAttribute('aria-selected', t.dataset.tab === name); });
+    $('#loginForm').style.display = name === 'login' ? 'flex' : 'none';
+    $('#registerForm').style.display = name === 'register' ? 'flex' : 'none';
+    $('#formFoot').style.display = name === 'login' ? 'block' : 'none';
+    $('#formTitle').textContent = tabsCopy[name].title;
+    $('#formSubtitle').textContent = tabsCopy[name].subtitle;
+    $('#authMsg').className = 'msg';
   }
+  $$('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+  $('#goRegister').addEventListener('click', (e) => { e.preventDefault(); switchTab('register'); });
 
-  function afterAdminAuth(token, admin){
-    localStorage.setItem('erp_admin_token', token);
-    localStorage.setItem('erp_admin_email', admin.email);
-    window.location.href = './admin.html';
-  }
-
+  // ===== تسجيل الدخول =====
   $('#loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = $('#loginBtn');
     const email = $('#loginEmail').value.trim();
     const password = $('#loginPassword').value;
-    
+
     if (!email || !password) {
       showMsg('يرجى إدخال البريد الإلكتروني وكلمة المرور', 'error');
       return;
     }
 
     setLoading(btn, true);
-    showMsg('جاري التحقق من بياناتك…', 'success');
-    
     try {
-      // 1) نجرّب دخول شركة أولاً
-      const r = await ApiClient.auth.login(email, password);
-      if (r.ok) { 
-        afterAuth(r.token, r.company); 
-        return; 
+      const r = await AuthClientV2.login(email, password);
+      if (!r.ok) {
+        const msg = /email not confirmed/i.test(r.error || '')
+          ? 'لازم تأكّد إيميلك الأول — افحص بريدك الوارد وادوس على رابط التأكيد'
+          : (r.error || 'بيانات الدخول غير صحيحة');
+        showMsg(msg, 'error');
+        return;
       }
-
-      // 2) إذا لم تكن شركة، نجرّب دخول الأدمن بشكل منفصل وآمن
-      const ra = await ApiClient.admin.login(email, password);
-      if (ra.ok) { 
-        afterAdminAuth(ra.token, ra.admin); 
-        return; 
-      }
-
-      // إرجاع رسالة الخطأ المحددة من السيرفر بأمان
-      showMsg(r.error || ra.error || 'بيانات الدخول غير صحيحة', 'error');
+      window.location.href = './app-new.html';
     } catch (err) {
-      console.error("Login client error:", err);
       showMsg('تعذّر الاتصال بالسيرفر. حاول مرة تانية.', 'error');
     } finally {
       setLoading(btn, false);
     }
   });
 
-  // ===== Forgot password placeholder =====
-  $('#forgotLink').addEventListener('click', (e) => {
+  // ===== إنشاء حساب جديد =====
+  $('#registerForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    showMsg('لو نسيت كلمة المرور، تواصل مع مدير النظام لإعادة الضبط.', 'error');
+    const btn = $('#registerBtn');
+    const companyName = $('#regCompanyName').value.trim();
+    const email = $('#regEmail').value.trim();
+    const password = $('#regPassword').value;
+
+    if (!companyName || !email || !password) {
+      showMsg('يرجى تعبئة كل الحقول', 'error');
+      return;
+    }
+    if (password.length < 8) {
+      showMsg('كلمة المرور لازم تكون 8 أحرف على الأقل', 'error');
+      return;
+    }
+
+    setLoading(btn, true);
+    try {
+      const r = await AuthClientV2.register(companyName, email, password);
+      if (!r.ok) {
+        showMsg(r.error || 'تعذّر إنشاء الحساب', 'error');
+        return;
+      }
+      showMsg('تم إنشاء حساب "' + companyName + '" بنجاح! افحص بريدك الإلكتروني وادوس على رابط التأكيد قبل تسجيل الدخول.', 'success');
+      $('#registerForm').reset();
+    } catch (err) {
+      showMsg('تعذّر الاتصال بالسيرفر. حاول مرة تانية.', 'error');
+    } finally {
+      setLoading(btn, false);
+    }
   });
 
-  // ===== Restore session (🛡️ تم عزلها لتجنب التوجيه التلقائي للتوكينات المنتهية قبل الفحص) =====
-  (function restoreSession(){
-    const token = localStorage.getItem('erp_token');
-    const company = localStorage.getItem('erp_company');
-    if (token && company) { 
-      window.location.href = './app.html'; 
-      return; 
+  // ===== نسيت كلمة المرور =====
+  $('#forgotLink').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = $('#loginEmail').value.trim();
+    if (!email) { showMsg('اكتب إيميلك فى الحقل فوق الأول، وبعدين دوس "نسيت كلمة المرور"', 'error'); return; }
+    try {
+      const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+      showMsg('تم إرسال رابط إعادة تعيين كلمة المرور إلى ' + email, 'success');
+    } catch (err) {
+      showMsg('تعذّر إرسال رابط إعادة التعيين. حاول مرة تانية.', 'error');
     }
+  });
 
-    const adminToken = localStorage.getItem('erp_admin_token');
-    const adminEmail = localStorage.getItem('erp_admin_email');
-    if (adminToken && adminEmail) { 
-      window.location.href = './admin.html'; 
-    }
+  // ===== استعادة الجلسة (لو المستخدم مسجّل دخول بالفعل) =====
+  (async function restoreSession(){
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) window.location.href = './app-new.html';
   })();
 
   // ===== Service worker =====
