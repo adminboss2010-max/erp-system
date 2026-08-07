@@ -2567,19 +2567,22 @@ async function submitRemoveTeamMember(targetUserId) {
 async function renderSettings() {
   const result = await SettingsUIClient.getCompany(currentCompanyId);
   const company = result.ok ? result.company : {};
+  const isOwner = currentUserRole === 'owner';
+  const ro = isOwner ? '' : 'disabled';
   document.getElementById('mainContent').innerHTML = `
     <div class="view-fade">
       ${viewHeader('💾','إعدادات الشركة')}
+      ${!isOwner ? '<p style="font-size:12px;color:var(--ink-mute)">تعديل بيانات الشركة متاح لمالك الشركة فقط — القيم الحالية للعرض فقط</p>' : ''}
       <div class="card" style="max-width:500px">
-        <label>اسم الشركة (عربي)</label><input id="s_nameAr" value="${company.name_ar||''}">
-        <label>اسم الشركة (إنجليزي)</label><input id="s_nameEn" value="${company.name_en||''}">
-        <label>العنوان</label><input id="s_address" value="${company.address||''}">
-        <label>التليفون</label><input id="s_phone" value="${company.phone||''}">
-        <label>الإيميل</label><input id="s_email" value="${company.email||''}">
-        <label>الرقم الضريبي</label><input id="s_taxNumber" value="${company.tax_number||''}">
-        <label>السجل التجاري</label><input id="s_crNumber" value="${company.cr_number||''}">
+        <label>اسم الشركة (عربي)</label><input id="s_nameAr" value="${company.name_ar||''}" ${ro}>
+        <label>اسم الشركة (إنجليزي)</label><input id="s_nameEn" value="${company.name_en||''}" ${ro}>
+        <label>العنوان</label><input id="s_address" value="${company.address||''}" ${ro}>
+        <label>التليفون</label><input id="s_phone" value="${company.phone||''}" ${ro}>
+        <label>الإيميل</label><input id="s_email" value="${company.email||''}" ${ro}>
+        <label>الرقم الضريبي</label><input id="s_taxNumber" value="${company.tax_number||''}" ${ro}>
+        <label>السجل التجاري</label><input id="s_crNumber" value="${company.cr_number||''}" ${ro}>
         <br><br>
-        <button class="btn-gold" onclick="submitSettings()">حفظ الإعدادات</button>
+        ${isOwner ? '<button class="btn-gold" onclick="submitSettings()">حفظ الإعدادات</button>' : ''}
         <div id="settingsMsg" style="margin-top:8px"></div>
       </div>
     </div>`;
@@ -2913,10 +2916,13 @@ async function renderSettingsFull() {
   const [keysResult, waResult] = await Promise.all([AdvancedSettingsClient.listApiKeys(currentCompanyId), AdvancedSettingsClient.getWhatsappSettings(currentCompanyId)]);
   const keys = keysResult.ok ? keysResult.keys : [];
   const wa = waResult.ok ? waResult.settings : null;
+  const isOwner = currentUserRole === 'owner';
+  const ro = isOwner ? '' : 'disabled';
 
   document.getElementById('mainContent').innerHTML = `
     <div class="view-fade">
       ${viewHeader('🎨','الإعدادات المتقدمة')}
+      ${!isOwner ? '<p style="font-size:12px;color:var(--ink-mute)">تعديل الإعدادات المتقدمة متاح لمالك الشركة فقط</p>' : ''}
 
       <div class="card">
         <h3>🌗 المظهر</h3>
@@ -2929,20 +2935,20 @@ async function renderSettingsFull() {
           <thead><tr><th>الاسم</th><th>المفتاح</th><th>الحالة</th></tr></thead>
           <tbody>${keys.map(k => `<tr><td>${k.name}</td><td><code style="font-size:11px">${k.token}</code></td><td>${k.is_active?'✅ نشط':'❌ معطّل'}</td></tr>`).join('') || '<tr><td colspan="3" class="empty-state">لا توجد مفاتيح بعد</td></tr>'}</tbody>
         </table>
-        <button style="margin-top:8px" onclick="createApiKey()">+ إنشاء مفتاح جديد</button>
+        ${isOwner ? '<button style="margin-top:8px" onclick="createApiKey()">+ إنشاء مفتاح جديد</button>' : ''}
       </div>
 
       <div class="card">
         <h3>📲 إعدادات واتساب</h3>
         <p style="font-size:11.5px;color:var(--ink-mute)">⚠️ لتفعيل الإرسال الفعلي، تحتاج حساب WhatsApp Business API حقيقي (Meta أو Twilio) — هنا بس بيانات الإعداد، الإرسال الفعلي خطوة تالية منفصلة تحتاج مفاتيحك الحقيقية</p>
         <label style="display:inline-flex;align-items:center;gap:6px">
-          <input type="checkbox" id="wa_enabled" style="width:auto" ${wa?.is_enabled?'checked':''}> تفعيل واتساب
+          <input type="checkbox" id="wa_enabled" style="width:auto" ${wa?.is_enabled?'checked':''} ${ro}> تفعيل واتساب
         </label><br>
         <label>مزوّد الخدمة</label>
-        <select id="wa_provider"><option value="whatsapp-business" ${wa?.api_provider==='whatsapp-business'?'selected':''}>WhatsApp Business API</option><option value="twilio" ${wa?.api_provider==='twilio'?'selected':''}>Twilio</option></select>
-        <label>رقم الهاتف (Phone Number ID)</label><input id="wa_phoneId" value="${wa?.phone_number_id||''}">
+        <select id="wa_provider" ${ro}><option value="whatsapp-business" ${wa?.api_provider==='whatsapp-business'?'selected':''}>WhatsApp Business API</option><option value="twilio" ${wa?.api_provider==='twilio'?'selected':''}>Twilio</option></select>
+        <label>رقم الهاتف (Phone Number ID)</label><input id="wa_phoneId" value="${wa?.phone_number_id||''}" ${ro}>
         <br><br>
-        <button class="btn-gold" onclick="saveWaSettings()">حفظ إعدادات واتساب</button>
+        ${isOwner ? '<button class="btn-gold" onclick="saveWaSettings()">حفظ إعدادات واتساب</button>' : ''}
         <div id="waMsg" style="margin-top:8px"></div>
       </div>
     </div>`;
