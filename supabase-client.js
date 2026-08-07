@@ -536,7 +536,7 @@ const DocumentsClient = {
 
     const { data: lines, error } = await supabaseClient
       .from('transactions')
-      .select('*, items(name, unit), customers(name, phone, address, code), suppliers(name, phone, tax_number, code)')
+      .select('*, items(name, unit, code), customers(name, phone, address, code), suppliers(name, phone, tax_number, code)')
       .eq('company_id', companyId).eq('doc_no', docNo).eq('type', docType)
       .order('created_at');
 
@@ -560,7 +560,7 @@ const DocumentsClient = {
       subtotal += lineNet;
       grandTax += (l.tax_amount || 0);
       return {
-        name: l.items?.name || '—', unit: l.items?.unit || 'قطعة', qty,
+        name: l.items?.name || '—', code: l.items?.code || '', unit: l.items?.unit || 'قطعة', qty,
         unitPrice, taxAmount: l.tax_amount || 0, lineTotal,
       };
     });
@@ -573,19 +573,26 @@ const DocumentsClient = {
       doc: {
         type: docType, typeLabel: typeLabels[docType] || docType, docNo,
         refDocNo: lines[0].ref_doc_no || null,
-        date: lines[0].date, company, party, items,
+        date: lines[0].date, dueDate: lines[0].due_date || null, company, party, items,
         subtotal, grandTax, grandTotal: grandTotal + grandTax,
         currency: company?.currency || 'KWD', isReturn, isCredit,
         partyLabel: lines[0].customers ? 'العميل' : (lines[0].suppliers ? 'المورد' : ''),
       }
     };
+  },
+
+  async setDueDate(companyId, docType, docNo, dueDate) {
+    const { error } = await supabaseClient.from('transactions')
+      .update({ due_date: dueDate || null })
+      .eq('company_id', companyId).eq('type', docType).eq('doc_no', docNo);
+    return { ok: !error, error: error?.message };
   }
 };
 const DocumentsClient2 = {
   async listAll(companyId, filters = {}) {
     let query = supabaseClient
       .from('transactions')
-      .select('doc_no, type, date, ref_doc_no, debit, credit, customers(name), suppliers(name)')
+      .select('doc_no, type, date, ref_doc_no, debit, credit, due_date, customers(name), suppliers(name)')
       .eq('company_id', companyId);
 
     if (filters.type) query = query.eq('type', filters.type);
@@ -601,7 +608,8 @@ const DocumentsClient2 = {
       const key = t.type + '_' + t.doc_no;
       if (!grouped[key]) {
         grouped[key] = { doc_no: t.doc_no, type: t.type, date: t.date, ref_doc_no: t.ref_doc_no,
-          party: t.customers?.name || t.suppliers?.name || '—', total: 0 };
+          party: t.customers?.name || t.suppliers?.name || '—', total: 0,
+          dueDate: t.due_date || null, isCredit: (t.type === 'sale' || t.type === 'purchase') && (t.debit || 0) > 0 };
       }
       grouped[key].total += (t.debit || 0) + (t.credit || 0);
     });

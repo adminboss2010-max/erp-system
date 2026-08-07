@@ -1050,13 +1050,17 @@ async function renderCustomerStatement() {
   initSearchSelect('stCust', cache.customers.map(c => ({ id: c.id, name: c.name })));
 }
 
+const CURRENCY_LABELS = { KWD: 'د.ك', SAR: 'ر.س', USD: '$', EUR: '€', AED: 'د.إ', EGP: 'ج.م', GBP: '£', JOD: 'د.أ' };
+function currencyLabel(code) { return CURRENCY_LABELS[code] || code || 'د.ك'; }
+
 async function printCustomerStatement() {
   const customerId = getSearchSelectValue('stCust');
   if (!customerId || !window._lastStatementData) { showToast('اعرض الكشف أولًا', 'error'); return; }
   const { custResult, rows, openingBalance, closingBalance, fromDate, toDate } = window._lastStatementData;
 
   const { data: company } = await supabaseClient.from('companies')
-    .select('name_ar, name_en, tax_number, cr_number, address, phone').eq('id', currentCompanyId).single();
+    .select('name_ar, name_en, tax_number, cr_number, address, phone, currency').eq('id', currentCompanyId).single();
+  const curr = currencyLabel(company?.currency);
 
   const logoInitial = (company?.name_ar || 'p').trim().charAt(0) || 'p';
   const now = new Date().toLocaleString('ar-KW', { dateStyle: 'medium', timeStyle: 'short' });
@@ -1106,13 +1110,13 @@ async function printCustomerStatement() {
     <div class="ph-rmeta">الفترة: ${fromDate||'البداية'} ← ${toDate||'اليوم'} · تاريخ الطباعة: ${now}</div>
   </div>
   <div class="kg">
-    <div class="kpi"><div class="kl">الرصيد الافتتاحي</div><div class="kv">${openingBalance.toFixed(3)}</div></div>
-    <div class="kpi" style="border-top-color:#1e7a3a"><div class="kl">الرصيد الختامي</div><div class="kv" style="color:#1e7a3a">${closingBalance.toFixed(3)}</div></div>
+    <div class="kpi"><div class="kl">الرصيد الافتتاحي</div><div class="kv">${openingBalance.toFixed(3)} ${curr}</div></div>
+    <div class="kpi" style="border-top-color:#1e7a3a"><div class="kl">الرصيد الختامي</div><div class="kv" style="color:#1e7a3a">${closingBalance.toFixed(3)} ${curr}</div></div>
     <div class="kpi" style="border-top-color:#2563a8"><div class="kl">عدد الحركات</div><div class="kv" style="color:#2563a8">${rows.length}</div></div>
   </div>
   <h3>📋 تفاصيل الحركات</h3>
   <table>
-    <thead><tr><th>التاريخ</th><th>البيان</th><th>الصنف</th><th>الكمية</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead>
+    <thead><tr><th>التاريخ</th><th>المستند</th><th>البيان</th><th>الصنف</th><th>الكمية</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>
   <div class="print-footer-doc">
@@ -1141,12 +1145,13 @@ async function loadStatementAction() {
   }
   const typeLabels = { sale: 'بيع', return: 'مرتجع', payment: 'سداد دفعة' };
   let runningBalance = openingResult.ok ? openingResult.balance : 0;
-  const rows = txResult.transactions.map(t => {
+  const rowsArray = txResult.transactions.map(t => {
     const isCashSale = t.type === 'sale' && !t.debit && t.credit;
     if (t.type === 'sale' && t.debit) runningBalance += t.debit;
     if (t.type !== 'sale') runningBalance -= (t.credit || 0);
     return `<tr>
       <td>${new Date(t.date).toLocaleDateString('ar-KW')}</td>
+      <td>${t.doc_no||'—'}</td>
       <td>${typeLabels[t.type]||t.type}</td>
       <td>${t.items?.name||'—'}</td>
       <td>${t.qty||'—'}</td>
@@ -1154,20 +1159,20 @@ async function loadStatementAction() {
       <td>${t.credit?t.credit.toFixed(3):'—'}</td>
       <td><strong>${isCashSale?'—':runningBalance.toFixed(3)}</strong></td>
     </tr>`;
-  }).join('');
+  });
   document.getElementById('statementOutput').innerHTML = `
     <div class="kpi-row">
-      <div class="kpi"><div class="label">الرصيد الافتتاحي</div><div class="value">${(openingResult.balance||0).toFixed(3)}</div></div>
-      <div class="kpi"><div class="label">الرصيد الختامي</div><div class="value">${runningBalance.toFixed(3)}</div></div>
+      <div class="kpi"><div class="label">الرصيد الافتتاحي</div><div class="value">${(openingResult.balance||0).toFixed(3)} د.ك</div></div>
+      <div class="kpi"><div class="label">الرصيد الختامي</div><div class="value">${runningBalance.toFixed(3)} د.ك</div></div>
       <div class="kpi"><div class="label">عدد الحركات</div><div class="value">${txResult.transactions.length}</div></div>
     </div>
     <table>
-      <thead><tr><th>التاريخ</th><th>البيان</th><th>الصنف</th><th>الكمية</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="7" class="empty-state">لا توجد حركات</td></tr>'}</tbody>
+      <thead><tr><th>التاريخ</th><th>المستند</th><th>البيان</th><th>الصنف</th><th>الكمية</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead>
+      <tbody>${rowsArray.join('') || '<tr><td colspan="8" class="empty-state">لا توجد حركات</td></tr>'}</tbody>
     </table>`;
 
   window._lastStatementData = {
-    custResult, rows: rows ? [rows] : [], openingBalance: openingResult.balance || 0,
+    custResult, rows: rowsArray, openingBalance: openingResult.balance || 0,
     closingBalance: runningBalance, fromDate, toDate
   };
   document.getElementById('printStatementBtn').style.display = 'inline-block';
@@ -1457,13 +1462,14 @@ async function printDocument(docType, docNo) {
 
   const itemsRows = doc.items.length > 0 ? doc.items.map(it => `
     <tr>
+      <td>${it.code || '—'}</td>
       <td>${it.name}</td>
       <td class="num">${it.qty} ${it.unit}</td>
       <td class="num">${it.unitPrice.toFixed(3)}</td>
       <td class="num">${it.taxAmount > 0 ? it.taxAmount.toFixed(3) : '—'}</td>
       <td class="num"><b>${it.lineTotal.toFixed(3)}</b></td>
     </tr>`).join('') : `
-    <tr><td colspan="4">قيمة السند المستلمة نقدًا/بنكيًا</td><td class="num"><b>${doc.grandTotal.toFixed(3)}</b></td></tr>`;
+    <tr><td colspan="5">قيمة السند المستلمة نقدًا/بنكيًا</td><td class="num"><b>${doc.grandTotal.toFixed(3)}</b></td></tr>`;
 
   const logoInitial = (doc.company?.name_ar || 'p').trim().charAt(0) || 'p';
   const now = new Date().toLocaleString('ar-KW', { dateStyle: 'medium', timeStyle: 'short' });
@@ -1564,17 +1570,18 @@ ${doc.party ? `
 <div>
   ${doc.isReturn ? '<span class="badge badge-return">مستند مرتجع</span>' : ''}
   ${docType !== 'payment' ? (doc.isCredit ? '<span class="badge badge-credit">آجل — على الحساب</span>' : '<span class="badge badge-cash">نقدي</span>') : ''}
+  ${doc.isCredit && doc.dueDate ? '<span class="badge badge-credit">تاريخ الاستحقاق: ' + new Date(doc.dueDate).toLocaleDateString('ar-KW') + '</span>' : ''}
 </div>
 
 <h3>📋 تفاصيل ${typeLabels[docType] || docType}</h3>
 <table>
-  <thead><tr><th>البيان</th><th>الكمية</th><th>سعر الوحدة</th><th>الضريبة</th><th>الإجمالي</th></tr></thead>
+  <thead><tr><th>الكود</th><th>البيان</th><th>الكمية</th><th>سعر الوحدة</th><th>الضريبة</th><th>الإجمالي</th></tr></thead>
   <tbody>${itemsRows}</tbody>
 </table>
 
 <div class="tcard">
   <div class="l">الإجمالي المستحق</div>
-  <div class="v">${doc.grandTotal.toFixed(3)} ${doc.currency}</div>
+  <div class="v">${doc.grandTotal.toFixed(3)} ${currencyLabel(doc.currency)}</div>
 </div>
 
 <div class="print-footer-doc">
@@ -1609,8 +1616,8 @@ async function renderDocumentsLog() {
         </div>
       </div>
       <table>
-        <thead><tr><th>النوع</th><th>رقم المستند</th><th>التاريخ</th><th>الجهة</th><th>مرجع</th><th>المبلغ</th><th></th></tr></thead>
-        <tbody id="documentsLogBody"><tr><td colspan="7">جاري التحميل...</td></tr></tbody>
+        <thead><tr><th>النوع</th><th>رقم المستند</th><th>التاريخ</th><th>الجهة</th><th>مرجع</th><th>المبلغ</th><th>الاستحقاق</th><th></th></tr></thead>
+        <tbody id="documentsLogBody"><tr><td colspan="8">جاري التحميل...</td></tr></tbody>
       </table>
     </div>`;
   loadDocumentsLog();
@@ -1625,7 +1632,7 @@ async function loadDocumentsLog() {
   const result = await DocumentsClient2.listAll(currentCompanyId, filters);
   const tbody = document.getElementById('documentsLogBody');
   if (!result.ok || result.documents.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">لا توجد مستندات مطابقة</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">لا توجد مستندات مطابقة</td></tr>';
     return;
   }
   tbody.innerHTML = result.documents.map(d => `
@@ -1636,8 +1643,14 @@ async function loadDocumentsLog() {
       <td>${d.party}</td>
       <td>${d.ref_doc_no || '—'}</td>
       <td>${d.total.toFixed(3)} د.ك</td>
+      <td>${d.isCredit ? `<input type="date" value="${d.dueDate||''}" style="font-size:11px;padding:3px" onchange="setDocDueDate('${d.type}','${d.doc_no}',this.value)">` : '—'}</td>
       <td><button onclick="printDocument('${d.type}', '${d.doc_no}')">🖨️ طباعة</button></td>
     </tr>`).join('');
+}
+async function setDocDueDate(docType, docNo, dueDate) {
+  const result = await DocumentsClient.setDueDate(currentCompanyId, docType, docNo, dueDate);
+  if (!result.ok) { showToast(result.error, 'error'); return; }
+  showToast('تم تحديث تاريخ الاستحقاق');
 }
 
 /* ============================================================
