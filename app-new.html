@@ -74,6 +74,10 @@
   .entity-card.is-inactive{ opacity:.5 }
   .entity-card .ec-actions{ display:flex; gap:6px; margin-top:10px }
   .entity-card .ec-actions button{ font-size:11px; padding:3px 9px }
+  .pagination{ display:flex; align-items:center; justify-content:center; gap:14px; margin-top:16px }
+  .pagination .pg-info{ font-size:12px; color:var(--ink-mute) }
+  th.sortable{ cursor:pointer; user-select:none }
+  th.sortable:hover{ opacity:.85 }
 
   .modal-overlay{
     position:fixed; inset:0; background:rgba(10,19,38,0.45); display:none;
@@ -322,6 +326,52 @@ let cache = { customers: [], agents: [], items: [], suppliers: [] };
 let saleLineItem = null;
 let purchaseLineItem = null;
 
+/* ---------- Pagination + فرز قابل لإعادة الاستخدام ---------- */
+const PAGE_SIZE = 20;
+const pageState = {};
+const sortState = {};
+function paginateArray(arr, key) {
+  const page = pageState[key] || 1;
+  const start = (page - 1) * PAGE_SIZE;
+  return arr.slice(start, start + PAGE_SIZE);
+}
+function paginationHtml(key, totalItems, rerenderFnName) {
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const page = Math.min(pageState[key] || 1, totalPages);
+  pageState[key] = page;
+  if (totalPages <= 1) return '';
+  return `<div class="pagination">
+    <button ${page<=1?'disabled':''} onclick="goToPage('${key}',${page-1},'${rerenderFnName}')">‹ السابق</button>
+    <span class="pg-info">صفحة ${page} من ${totalPages} (${totalItems} سجل)</span>
+    <button ${page>=totalPages?'disabled':''} onclick="goToPage('${key}',${page+1},'${rerenderFnName}')">التالي ›</button>
+  </div>`;
+}
+function goToPage(key, page, rerenderFnName) {
+  pageState[key] = page;
+  window[rerenderFnName]();
+}
+function sortArray(arr, key, defaultCol) {
+  const s = sortState[key] || { col: defaultCol, dir: 1 };
+  return [...arr].sort((a, b) => {
+    let va = a[s.col], vb = b[s.col];
+    if (va == null) va = '';
+    if (vb == null) vb = '';
+    const na = Number(va), nb = Number(vb);
+    if (va !== '' && vb !== '' && !isNaN(na) && !isNaN(nb)) return (na - nb) * s.dir;
+    return String(va).localeCompare(String(vb), 'ar') * s.dir;
+  });
+}
+function toggleSort(key, col, rerenderFnName) {
+  const s = sortState[key];
+  sortState[key] = { col, dir: (s && s.col === col) ? -s.dir : 1 };
+  window[rerenderFnName]();
+}
+function sortArrow(key, col) {
+  const s = sortState[key];
+  if (!s || s.col !== col) return '';
+  return s.dir === 1 ? ' ▲' : ' ▼';
+}
+
 // 🆕 فتح/قفل مجموعة فى القائمة الجانبية (زى toggleMod الأصلية)
 function toggleMod(modKey) {
   const modHeader = document.querySelector(`.side-mod[data-mod="${modKey}"]`);
@@ -510,20 +560,28 @@ async function renderCustomers() {
     <div class="view-fade">
       ${viewHeader('👥','العملاء', activeCount + ' عميل مسجّل')}
       <div class="toolbar">
-        <input class="filter-input" id="custFilter" placeholder="🔍 ابحث بالاسم أو الكود..." oninput="renderCustomersGrid(this.value)">
-        <label style="font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:4px;white-space:nowrap"><input type="checkbox" id="custShowInactive" onchange="renderCustomersGrid(document.getElementById('custFilter').value)"> إظهار الموقوفين</label>
+        <input class="filter-input" id="custFilter" placeholder="🔍 ابحث بالاسم أو الكود..." oninput="pageState.customers=1; renderCustomersGrid(this.value)">
+        <label style="font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:4px;white-space:nowrap"><input type="checkbox" id="custShowInactive" onchange="pageState.customers=1; renderCustomersGrid(document.getElementById('custFilter').value)"> إظهار الموقوفين</label>
+        <select onchange="toggleSort('customers', this.value, 'renderCustomersGridFull')" style="font-size:12px">
+          <option value="name">فرز: الاسم</option>
+          <option value="balance">فرز: الرصيد</option>
+          <option value="code">فرز: الكود</option>
+        </select>
         <div class="spacer"></div>
         <button class="btn-gold" onclick="openAddCustomerModal()">+ إضافة عميل</button>
       </div>
       <div class="list-grid" id="custGrid"></div>
+      <div id="custPagination"></div>
     </div>`;
   renderCustomersGrid('');
 }
+function renderCustomersGridFull() { renderCustomersGrid(document.getElementById('custFilter')?.value || ''); }
 function renderCustomersGrid(filter) {
   const f = (filter||'').toLowerCase();
   const showInactive = document.getElementById('custShowInactive')?.checked;
-  const filtered = cache.customers.filter(c => (showInactive || c.is_active !== false) && (!f || c.name.toLowerCase().includes(f) || (c.code||'').toLowerCase().includes(f)));
-  document.getElementById('custGrid').innerHTML = filtered.map(c => `
+  const filtered = sortArray(cache.customers.filter(c => (showInactive || c.is_active !== false) && (!f || c.name.toLowerCase().includes(f) || (c.code||'').toLowerCase().includes(f))), 'customers', 'name');
+  const pageItems = paginateArray(filtered, 'customers');
+  document.getElementById('custGrid').innerHTML = pageItems.map(c => `
     <div class="entity-card ${c.is_active===false?'is-inactive':''}">
       <div class="ec-top"><div class="ec-name">${c.name}</div><div class="ec-code">${c.code||'—'}</div></div>
       <div class="ec-line"><span>📞 ${c.phone||'—'}</span></div>
@@ -534,6 +592,7 @@ function renderCustomersGrid(filter) {
         <button onclick="toggleCustomerActive('${c.id}', ${c.is_active===false})">${c.is_active===false?'♻️ إعادة تفعيل':'⛔ إيقاف'}</button>
       </div>
     </div>`).join('') || '<div class="empty-state">لا يوجد عملاء مطابقين</div>';
+  document.getElementById('custPagination').innerHTML = paginationHtml('customers', filtered.length, 'renderCustomersGridFull');
 }
 function openAddCustomerModal() {
   openModal('➕ إضافة عميل جديد', `
@@ -650,21 +709,30 @@ async function renderItems() {
     <div class="view-fade">
       ${viewHeader('📦','الأصناف', activeCount + ' صنف')}
       <div class="toolbar">
-        <input class="filter-input" id="itFilter" placeholder="🔍 ابحث بالاسم أو الكود..." oninput="renderItemsGrid(this.value)">
-        <label style="font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:4px;white-space:nowrap"><input type="checkbox" id="itShowInactive" onchange="renderItemsGrid(document.getElementById('itFilter').value)"> إظهار الموقوف</label>
+        <input class="filter-input" id="itFilter" placeholder="🔍 ابحث بالاسم أو الكود..." oninput="pageState.items=1; renderItemsGrid(this.value)">
+        <label style="font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:4px;white-space:nowrap"><input type="checkbox" id="itShowInactive" onchange="pageState.items=1; renderItemsGrid(document.getElementById('itFilter').value)"> إظهار الموقوف</label>
+        <select onchange="toggleSort('items', this.value, 'renderItemsGridFull')" style="font-size:12px">
+          <option value="name">فرز: الاسم</option>
+          <option value="stock_qty">فرز: المخزون</option>
+          <option value="unit_price">فرز: سعر البيع</option>
+          <option value="code">فرز: الكود</option>
+        </select>
         <div class="spacer"></div>
         <button onclick="window.location.href='import-items.html'">📥 استيراد من إكسل</button>
         <button class="btn-gold" onclick="openAddItemModal()">+ إضافة صنف</button>
       </div>
       <div class="list-grid" id="itGrid"></div>
+      <div id="itPagination"></div>
     </div>`;
   renderItemsGrid('');
 }
+function renderItemsGridFull() { renderItemsGrid(document.getElementById('itFilter')?.value || ''); }
 function renderItemsGrid(filter) {
   const f = (filter||'').toLowerCase();
   const showInactive = document.getElementById('itShowInactive')?.checked;
-  const filtered = cache.items.filter(i => (showInactive || i.is_active !== false) && (!f || i.name.toLowerCase().includes(f) || (i.code||'').toLowerCase().includes(f)));
-  document.getElementById('itGrid').innerHTML = filtered.map(i => `
+  const filtered = sortArray(cache.items.filter(i => (showInactive || i.is_active !== false) && (!f || i.name.toLowerCase().includes(f) || (i.code||'').toLowerCase().includes(f))), 'items', 'name');
+  const pageItems = paginateArray(filtered, 'items');
+  document.getElementById('itGrid').innerHTML = pageItems.map(i => `
     <div class="entity-card ${i.is_active===false?'is-inactive':''}">
       <div class="ec-top"><div class="ec-name">${i.name}</div><div class="ec-code">${i.code||'—'}</div></div>
       <div class="ec-line"><span>تكلفة: ${(i.unit_cost||0).toFixed(3)}</span><span>بيع: ${(i.unit_price||0).toFixed(3)}</span></div>
@@ -674,6 +742,7 @@ function renderItemsGrid(filter) {
         <button onclick="toggleItemActive('${i.id}', ${i.is_active===false})">${i.is_active===false?'♻️ إعادة تفعيل':'⛔ إيقاف'}</button>
       </div>
     </div>`).join('') || '<div class="empty-state">لا يوجد أصناف مطابقة</div>';
+  document.getElementById('itPagination').innerHTML = paginationHtml('items', filtered.length, 'renderItemsGridFull');
 }
 function openAddItemModal() {
   openModal('➕ إضافة صنف جديد', `
@@ -741,20 +810,28 @@ async function renderSuppliers() {
     <div class="view-fade">
       ${viewHeader('🚚','الموردين', activeCount + ' مورد')}
       <div class="toolbar">
-        <input class="filter-input" id="supFilter" placeholder="🔍 ابحث بالاسم..." oninput="renderSuppliersGrid(this.value)">
-        <label style="font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:4px;white-space:nowrap"><input type="checkbox" id="supShowInactive" onchange="renderSuppliersGrid(document.getElementById('supFilter').value)"> إظهار الموقوفين</label>
+        <input class="filter-input" id="supFilter" placeholder="🔍 ابحث بالاسم..." oninput="pageState.suppliers=1; renderSuppliersGrid(this.value)">
+        <label style="font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:4px;white-space:nowrap"><input type="checkbox" id="supShowInactive" onchange="pageState.suppliers=1; renderSuppliersGrid(document.getElementById('supFilter').value)"> إظهار الموقوفين</label>
+        <select onchange="toggleSort('suppliers', this.value, 'renderSuppliersGridFull')" style="font-size:12px">
+          <option value="name">فرز: الاسم</option>
+          <option value="balance">فرز: المستحق</option>
+          <option value="code">فرز: الكود</option>
+        </select>
         <div class="spacer"></div>
         <button class="btn-gold" onclick="openAddSupplierModal()">+ إضافة مورد</button>
       </div>
       <div class="list-grid" id="supGrid"></div>
+      <div id="supPagination"></div>
     </div>`;
   renderSuppliersGrid('');
 }
+function renderSuppliersGridFull() { renderSuppliersGrid(document.getElementById('supFilter')?.value || ''); }
 function renderSuppliersGrid(filter) {
   const f = (filter||'').toLowerCase();
   const showInactive = document.getElementById('supShowInactive')?.checked;
-  const filtered = cache.suppliers.filter(s => (showInactive || s.is_active !== false) && (!f || s.name.toLowerCase().includes(f)));
-  document.getElementById('supGrid').innerHTML = filtered.map(s => `
+  const filtered = sortArray(cache.suppliers.filter(s => (showInactive || s.is_active !== false) && (!f || s.name.toLowerCase().includes(f))), 'suppliers', 'name');
+  const pageItems = paginateArray(filtered, 'suppliers');
+  document.getElementById('supGrid').innerHTML = pageItems.map(s => `
     <div class="entity-card ${s.is_active===false?'is-inactive':''}">
       <div class="ec-top"><div class="ec-name">${s.name}</div><div class="ec-code">${s.code||'—'}</div></div>
       <div class="ec-line"><span>📞 ${s.phone||'—'}</span></div>
@@ -765,6 +842,7 @@ function renderSuppliersGrid(filter) {
         <button onclick="toggleSupplierActive('${s.id}', ${s.is_active===false})">${s.is_active===false?'♻️ إعادة تفعيل':'⛔ إيقاف'}</button>
       </div>
     </div>`).join('') || '<div class="empty-state">لا يوجد موردين مطابقين</div>';
+  document.getElementById('supPagination').innerHTML = paginationHtml('suppliers', filtered.length, 'renderSuppliersGridFull');
 }
 function openAddSupplierModal() {
   openModal('➕ إضافة مورد جديد', `
@@ -1616,26 +1694,44 @@ async function renderDocumentsLog() {
         </div>
       </div>
       <table>
-        <thead><tr><th>النوع</th><th>رقم المستند</th><th>التاريخ</th><th>الجهة</th><th>مرجع</th><th>المبلغ</th><th>الاستحقاق</th><th></th></tr></thead>
+        <thead><tr>
+          <th class="sortable" onclick="toggleSort('documentsLog','type','renderDocumentsLogTable')">النوع${sortArrow('documentsLog','type')}</th>
+          <th class="sortable" onclick="toggleSort('documentsLog','doc_no','renderDocumentsLogTable')">رقم المستند${sortArrow('documentsLog','doc_no')}</th>
+          <th class="sortable" onclick="toggleSort('documentsLog','date','renderDocumentsLogTable')">التاريخ${sortArrow('documentsLog','date')}</th>
+          <th class="sortable" onclick="toggleSort('documentsLog','party','renderDocumentsLogTable')">الجهة${sortArrow('documentsLog','party')}</th>
+          <th>مرجع</th>
+          <th class="sortable" onclick="toggleSort('documentsLog','total','renderDocumentsLogTable')">المبلغ${sortArrow('documentsLog','total')}</th>
+          <th>الاستحقاق</th><th></th></tr></thead>
         <tbody id="documentsLogBody"><tr><td colspan="8">جاري التحميل...</td></tr></tbody>
       </table>
+      <div id="dlPagination"></div>
     </div>`;
   loadDocumentsLog();
 }
 
+let documentsLogData = [];
 async function loadDocumentsLog() {
   const filters = {
     type: document.getElementById('dl_type').value || null,
     fromDate: document.getElementById('dl_from').value || null,
     toDate: document.getElementById('dl_to').value || null,
   };
+  pageState.documentsLog = 1;
   const result = await DocumentsClient2.listAll(currentCompanyId, filters);
+  documentsLogData = result.ok ? result.documents : [];
+  renderDocumentsLogTable();
+}
+
+function renderDocumentsLogTable() {
   const tbody = document.getElementById('documentsLogBody');
-  if (!result.ok || result.documents.length === 0) {
+  if (documentsLogData.length === 0) {
     tbody.innerHTML = '<tr><td colspan="8" class="empty-state">لا توجد مستندات مطابقة</td></tr>';
+    document.getElementById('dlPagination').innerHTML = '';
     return;
   }
-  tbody.innerHTML = result.documents.map(d => `
+  const sorted = sortArray(documentsLogData, 'documentsLog', 'date');
+  const pageItems = paginateArray(sorted, 'documentsLog');
+  tbody.innerHTML = pageItems.map(d => `
     <tr>
       <td>${docTypeLabels[d.type] || d.type}</td>
       <td>${d.doc_no}</td>
@@ -1646,6 +1742,7 @@ async function loadDocumentsLog() {
       <td>${d.isCredit ? `<input type="date" value="${d.dueDate||''}" style="font-size:11px;padding:3px" onchange="setDocDueDate('${d.type}','${d.doc_no}',this.value)">` : '—'}</td>
       <td><button onclick="printDocument('${d.type}', '${d.doc_no}')">🖨️ طباعة</button></td>
     </tr>`).join('');
+  document.getElementById('dlPagination').innerHTML = paginationHtml('documentsLog', sorted.length, 'renderDocumentsLogTable');
 }
 async function setDocDueDate(docType, docNo, dueDate) {
   const result = await DocumentsClient.setDueDate(currentCompanyId, docType, docNo, dueDate);
