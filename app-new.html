@@ -210,6 +210,26 @@
 
     <div class="sidebar-group-title">📈 التقارير</div>
     <a class="sidebar-link" data-view="customerStatement" onclick="switchView('customerStatement')"><span class="ic">📋</span> كشف حساب عميل</a>
+    <a class="sidebar-link" data-view="receivablesAging" onclick="switchView('receivablesAging')"><span class="ic">⏳</span> أعمار الذمم</a>
+    <a class="sidebar-link" data-view="commissions" onclick="switchView('commissions')"><span class="ic">💵</span> عمولات المناديب</a>
+
+    <div class="sidebar-group-title">🧮 المحاسبة المتقدمة</div>
+    <a class="sidebar-link" data-view="assets" onclick="switchView('assets')"><span class="ic">🏢</span> الأصول الثابتة</a>
+    <a class="sidebar-link" data-view="bankReconciliation" onclick="switchView('bankReconciliation')"><span class="ic">🏦</span> التسوية البنكية</a>
+    <a class="sidebar-link" data-view="tax" onclick="switchView('tax')"><span class="ic">🏛️</span> الضرائب</a>
+
+    <div class="sidebar-group-title">👥 الموارد البشرية</div>
+    <a class="sidebar-link" data-view="employees" onclick="switchView('employees')"><span class="ic">👤</span> الموظفون</a>
+    <a class="sidebar-link" data-view="payrollRun" onclick="switchView('payrollRun')"><span class="ic">💰</span> تشغيل الرواتب</a>
+
+    <div class="sidebar-group-title">📦 المشتريات المتقدمة</div>
+    <a class="sidebar-link" data-view="purchaseOrders" onclick="switchView('purchaseOrders')"><span class="ic">📋</span> أوامر الشراء</a>
+
+    <div class="sidebar-group-title">📝 المبيعات المتقدمة</div>
+    <a class="sidebar-link" data-view="quotations" onclick="switchView('quotations')"><span class="ic">📝</span> عروض الأسعار</a>
+
+    <div class="sidebar-group-title">🏬 الإدارة</div>
+    <a class="sidebar-link" data-view="branches" onclick="switchView('branches')"><span class="ic">🏬</span> الفروع</a>
     <a class="sidebar-link" data-view="documentsLog" onclick="switchView('documentsLog')"><span class="ic">🗂️</span> سجل المستندات</a>
   </nav>
 
@@ -336,6 +356,10 @@ async function switchView(viewName) {
     dashboard: renderDashboard, customers: renderCustomers, agents: renderAgents,
     items: renderItems, suppliers: renderSuppliers, newSale: renderNewSale,
     newPurchase: renderNewPurchase, newPurchaseReturn: renderNewPurchaseReturn, newReturn: renderNewReturn, newPayment: renderNewPayment, customerStatement: renderCustomerStatement, documentsLog: renderDocumentsLog,
+    receivablesAging: renderReceivablesAging, commissions: renderCommissions,
+    assets: renderAssets, bankReconciliation: renderBankReconciliation, tax: renderTax,
+    employees: renderEmployees, payrollRun: renderPayrollRun,
+    purchaseOrders: renderPurchaseOrders, quotations: renderQuotations, branches: renderBranches,
   };
   try { await renderers[viewName](); }
   catch (e) { document.getElementById('mainContent').innerHTML = `<div class="empty-state msg-error">خطأ: ${e.message}</div>`; }
@@ -1261,6 +1285,544 @@ async function loadDocumentsLog() {
       <td><button onclick="printDocument('${d.type}', '${d.doc_no}')">🖨️ طباعة</button></td>
     </tr>`).join('');
 }
+
+/* ============================================================
+   🆕 إضافات app-new.html — الجزء 1: الموارد البشرية، الأصول الثابتة، المشتريات المتقدمة
+   تُضاف قبل سطر init(); الأخير فى الملف
+   ============================================================ */
+
+/* ---------- 1) الموظفون والرواتب ---------- */
+async function renderEmployees() {
+  const result = await EmployeesClient.list(currentCompanyId);
+  const employees = result.ok ? result.employees : [];
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('👤','الموظفون والرواتب', employees.length + ' موظف')}
+      <div class="toolbar">
+        <div class="spacer"></div>
+        <button onclick="switchView('payrollRun')">💰 تشغيل رواتب الشهر</button>
+        <button class="btn-gold" onclick="openAddEmployeeModal()">+ إضافة موظف</button>
+      </div>
+      <table>
+        <thead><tr><th>الكود</th><th>الاسم</th><th>المنصب</th><th>الراتب الأساسي</th><th>تاريخ التعيين</th><th>الجنسية</th><th></th></tr></thead>
+        <tbody>
+          ${employees.map(e => `
+            <tr>
+              <td>${e.code}</td><td><strong>${e.name}</strong></td><td>${e.position||'—'}</td>
+              <td>${(e.basic_salary||0).toFixed(3)}</td><td>${e.hire_date}</td><td>${e.nationality}</td>
+              <td><button onclick="calcEosbFor('${e.id}','${e.name.replace(/'/g,"")}')">🏆 EOSB</button></td>
+            </tr>`).join('') || '<tr><td colspan="7" class="empty-state">لا يوجد موظفون بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+function openAddEmployeeModal() {
+  openModal('➕ إضافة موظف جديد', `
+    <label>الكود *</label><input id="m_empCode">
+    <label>الاسم *</label><input id="m_empName">
+    <label>المنصب</label><input id="m_empPosition" placeholder="مندوب مبيعات">
+    <label>القسم</label><input id="m_empDept">
+    <label>الراتب الأساسي (د.ك) *</label><input id="m_empSalary" type="number" step="0.001">
+    <label>تاريخ التعيين *</label><input id="m_empHireDate" type="date" value="${new Date().toISOString().split('T')[0]}">
+    <label>الجنسية</label><input id="m_empNat" value="كويتي">
+    <div id="m_empMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitAddEmployee()">حفظ الموظف</button></div>
+  `);
+}
+async function submitAddEmployee() {
+  const emp = {
+    code: document.getElementById('m_empCode').value,
+    name: document.getElementById('m_empName').value,
+    position: document.getElementById('m_empPosition').value,
+    department: document.getElementById('m_empDept').value,
+    basic_salary: parseFloat(document.getElementById('m_empSalary').value) || 0,
+    hire_date: document.getElementById('m_empHireDate').value,
+    nationality: document.getElementById('m_empNat').value || 'كويتي',
+  };
+  if (!emp.code || !emp.name || !emp.basic_salary || !emp.hire_date) {
+    document.getElementById('m_empMsg').innerHTML = '<span class="msg-error">الكود والاسم والراتب وتاريخ التعيين مطلوبين</span>'; return;
+  }
+  const result = await EmployeesClient.create(currentCompanyId, emp);
+  if (!result.ok) { document.getElementById('m_empMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal(); showToast('تم إضافة الموظف بنجاح'); renderEmployees();
+}
+async function calcEosbFor(empId, empName) {
+  const result = await EmployeesClient.calculateEOSB(empId, new Date().toISOString().split('T')[0]);
+  if (!result.ok) { showToast(result.error, 'error'); return; }
+  openModal('🏆 مكافأة نهاية الخدمة — ' + empName, `
+    <div class="kpi-row">
+      <div class="kpi"><div class="label">سنوات الخدمة</div><div class="value">${result.years_of_service}</div></div>
+      <div class="kpi"><div class="label">المكافأة المستحقة</div><div class="value">${result.eosb_amount.toFixed(3)}</div></div>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink-soft)">${result.calculation}</p>
+  `);
+}
+
+async function renderPayrollRun() {
+  const [empResult, historyResult] = await Promise.all([
+    EmployeesClient.list(currentCompanyId), EmployeesClient.payrollHistory(currentCompanyId)
+  ]);
+  const activeCount = (empResult.ok ? empResult.employees : []).filter(e => e.status === 'active').length;
+  const runs = historyResult.ok ? historyResult.runs : [];
+  const thisMonth = new Date().toISOString().slice(0, 7);
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('💰','تشغيل الرواتب الشهرية', activeCount + ' موظف نشط')}
+      <div class="card" style="max-width:400px">
+        <label style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px">الشهر</label>
+        <input id="pay_period" type="month" value="${thisMonth}">
+        <br><br>
+        <button class="btn-gold" onclick="submitPayrollRun()">✅ تشغيل رواتب هذا الشهر</button>
+        <div id="payrollMsg" style="margin-top:8px"></div>
+      </div>
+      <div class="card" style="margin-top:20px">
+        <h3>📜 سجل دورات الرواتب</h3>
+        <table>
+          <thead><tr><th>الدورة</th><th>الموظفون</th><th>الإجمالي</th><th>التأمينات</th><th>الصافي</th><th>تكلفة الشركة</th></tr></thead>
+          <tbody>
+            ${runs.map(r => `<tr><td>${r.period}</td><td>${r.employees_count}</td><td>${r.gross_total.toFixed(3)}</td><td>${r.deductions_total.toFixed(3)}</td><td><strong>${r.net_total.toFixed(3)}</strong></td><td>${r.total_cost.toFixed(3)}</td></tr>`).join('') || '<tr><td colspan="6" class="empty-state">لا يوجد دورات بعد</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+async function submitPayrollRun() {
+  const period = document.getElementById('pay_period').value;
+  if (!period) { document.getElementById('payrollMsg').innerHTML = '<span class="msg-error">اختر الشهر</span>'; return; }
+  const result = await EmployeesClient.runPayroll(currentCompanyId, period);
+  if (!result.ok) { document.getElementById('payrollMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  showToast(`تم تشغيل رواتب ${period} — الصافي: ${result.net?.toFixed(3)} د.ك`);
+  renderPayrollRun();
+}
+
+/* ---------- 2) الأصول الثابتة ---------- */
+async function renderAssets() {
+  const [assetsResult, catsResult] = await Promise.all([AssetsClient.list(currentCompanyId), AssetsClient.listCategories(currentCompanyId)]);
+  const assets = assetsResult.ok ? assetsResult.assets : [];
+  cache.assetCategories = catsResult.ok ? catsResult.categories : [];
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('🏢','الأصول الثابتة', assets.length + ' أصل مسجّل')}
+      <div class="toolbar"><div class="spacer"></div><button class="btn-gold" onclick="openAddAssetModal()">+ إضافة أصل</button></div>
+      <table>
+        <thead><tr><th>الكود</th><th>الاسم</th><th>الفئة</th><th>التكلفة</th><th>تاريخ الشراء</th><th>العمر الإنتاجي</th><th></th></tr></thead>
+        <tbody>
+          ${assets.map(a => `
+            <tr>
+              <td>${a.asset_code}</td><td><strong>${a.name_ar}</strong></td><td>${a.category_key}</td>
+              <td>${a.cost.toFixed(3)}</td><td>${a.acquire_date}</td><td>${a.useful_life_years} سنة</td>
+              <td><button onclick="runDepreciationFor('${a.id}')">📉 إهلاك الشهر الحالي</button></td>
+            </tr>`).join('') || '<tr><td colspan="7" class="empty-state">لا يوجد أصول مسجّلة بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+function openAddAssetModal() {
+  const catOptions = (cache.assetCategories || []).map(c => `<option value="${c.category_key}">${c.name_ar} (${c.useful_life_years} سنة)</option>`).join('');
+  openModal('➕ إضافة أصل ثابت', `
+    <label>كود الأصل *</label><input id="m_assetCode" placeholder="مثال: 110301-01">
+    <label>الاسم *</label><input id="m_assetName">
+    <label>الفئة *</label><select id="m_assetCat">${catOptions}</select>
+    <label>التكلفة *</label><input id="m_assetCost" type="number" step="0.001">
+    <label>تاريخ الشراء *</label><input id="m_assetDate" type="date" value="${new Date().toISOString().split('T')[0]}">
+    <div id="m_assetMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitAddAsset()">حفظ الأصل</button></div>
+  `);
+}
+async function submitAddAsset() {
+  const catKey = document.getElementById('m_assetCat').value;
+  const cat = (cache.assetCategories || []).find(c => c.category_key === catKey);
+  const asset = {
+    asset_code: document.getElementById('m_assetCode').value,
+    name_ar: document.getElementById('m_assetName').value,
+    category_key: catKey,
+    cost: parseFloat(document.getElementById('m_assetCost').value) || 0,
+    acquire_date: document.getElementById('m_assetDate').value,
+    salvage_value: cat ? parseFloat(document.getElementById('m_assetCost').value) * (cat.salvage_pct/100) : 0,
+    useful_life_years: cat ? cat.useful_life_years : 5,
+    dep_method: cat ? cat.dep_method : 'straight-line',
+  };
+  if (!asset.asset_code || !asset.name_ar || !asset.cost) { document.getElementById('m_assetMsg').innerHTML = '<span class="msg-error">الحقول المطلوبة ناقصة</span>'; return; }
+  const result = await AssetsClient.create(currentCompanyId, asset);
+  if (!result.ok) { document.getElementById('m_assetMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal(); showToast('تم إضافة الأصل بنجاح'); renderAssets();
+}
+async function runDepreciationFor(assetId) {
+  const now = new Date();
+  const result = await AssetsClient.runDepreciation(currentCompanyId, assetId, now.getFullYear(), now.getMonth()+1);
+  if (!result.ok) { showToast(result.error, 'error'); return; }
+  showToast(`تم تسجيل إهلاك بقيمة ${result.depreciation_amount?.toFixed(3)} — القيمة الدفترية: ${result.book_value?.toFixed(3)}`);
+}
+
+/* ---------- 3) المشتريات المتقدمة (أمر شراء → استلام → فاتورة مورد) ---------- */
+async function renderPurchaseOrders() {
+  const result = await ProcurementClient.listPOs(currentCompanyId);
+  const orders = result.ok ? result.orders : [];
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('📋','أوامر الشراء', orders.length + ' أمر')}
+      <div class="toolbar"><div class="spacer"></div><button class="btn-gold" onclick="openCreatePOModal()">+ أمر شراء جديد</button></div>
+      <table>
+        <thead><tr><th>الرقم</th><th>المورد</th><th>الصافي</th><th>الحالة</th><th></th></tr></thead>
+        <tbody>
+          ${orders.map(po => `
+            <tr>
+              <td>${po.po_number}</td><td>${po.suppliers?.name||'—'}</td><td>${po.net_total.toFixed(3)}</td>
+              <td><span class="ec-badge ${po.status==='closed'?'':'warn'}">${po.status}</span></td>
+              <td>
+                ${po.status !== 'closed' ? `<button onclick="openReceiveGoodsModal('${po.id}','${po.po_number}')">📥 استلام</button>` : ''}
+                <button onclick="openVendorInvoiceModal('${po.id}','${po.po_number}','${po.supplier_id||''}','${po.net_total}')">🧾 فاتورة مورد</button>
+              </td>
+            </tr>`).join('') || '<tr><td colspan="5" class="empty-state">لا يوجد أوامر شراء بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+async function openCreatePOModal() {
+  const [s, i] = await Promise.all([SuppliersClient.list(currentCompanyId), ItemsClient.list(currentCompanyId)]);
+  cache.suppliers = s.ok ? s.suppliers : [];
+  cache.items = i.ok ? i.items : [];
+  openModal('➕ أمر شراء جديد', `
+    <label>المورد</label>${searchSelectHtml('poSup', 'ابحث عن مورد...')}
+    <label style="margin-top:10px">الصنف</label>${searchSelectHtml('poItem', 'ابحث عن صنف...')}
+    <label style="margin-top:10px">الكمية</label><input id="po_qty" type="number" min="1">
+    <label>سعر الوحدة</label><input id="po_price" type="number" step="0.001">
+    <label>نسبة خصم تجاري %</label><input id="po_disc" type="number" step="0.1" value="0">
+    <div id="m_poMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitCreatePO()">إنشاء أمر الشراء</button></div>
+  `);
+  initSearchSelect('poSup', cache.suppliers.map(s => ({ id: s.id, name: s.name })));
+  initSearchSelect('poItem', cache.items.map(i => ({ id: i.id, name: i.name })));
+}
+async function submitCreatePO() {
+  const supplierId = getSearchSelectValue('poSup');
+  const itemId = getSearchSelectValue('poItem');
+  const qty = parseFloat(document.getElementById('po_qty').value);
+  const price = parseFloat(document.getElementById('po_price').value);
+  const disc = parseFloat(document.getElementById('po_disc').value) || 0;
+  if (!itemId || !qty || !price) { document.getElementById('m_poMsg').innerHTML = '<span class="msg-error">أكمل بيانات الصنف والسعر</span>'; return; }
+  const result = await ProcurementClient.createPO(currentCompanyId, supplierId || null, [{ item_id: itemId, qty, unit_price: price }], disc);
+  if (!result.ok) { document.getElementById('m_poMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal(); showToast(`تم إنشاء أمر الشراء ${result.po_number}`); renderPurchaseOrders();
+}
+async function openReceiveGoodsModal(poId, poNumber) {
+  const result = await ProcurementClient.getPOLines(poId);
+  const lines = result.ok ? result.lines : [];
+  openModal('📥 استلام بضاعة — ' + poNumber, `
+    ${lines.map(l => `
+      <div style="margin-bottom:10px">
+        <label>${l.items?.name} (مطلوب: ${l.qty}, مستلم سابقًا: ${l.received_qty})</label>
+        <input type="number" class="recv-qty-input" data-line-id="${l.id}" placeholder="الكمية المستلمة الآن" min="0">
+      </div>`).join('')}
+    <div id="m_grMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitReceiveGoods('${poId}')">تأكيد الاستلام</button></div>
+  `);
+}
+async function submitReceiveGoods(poId) {
+  const inputs = document.querySelectorAll('.recv-qty-input');
+  const lines = Array.from(inputs).filter(i => parseFloat(i.value) > 0).map(i => ({ po_line_id: i.dataset.lineId, received_qty: parseFloat(i.value) }));
+  if (lines.length === 0) { document.getElementById('m_grMsg').innerHTML = '<span class="msg-error">أدخل كمية واحدة على الأقل</span>'; return; }
+  const result = await ProcurementClient.receiveGoods(currentCompanyId, poId, lines);
+  if (!result.ok) { document.getElementById('m_grMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal(); showToast(`تم الاستلام — إذن رقم ${result.gr_number}`); renderPurchaseOrders();
+}
+function openVendorInvoiceModal(poId, poNumber, supplierId, netTotal) {
+  openModal('🧾 فاتورة مورد — ' + poNumber, `
+    <label>مبلغ الفاتورة</label><input id="vi_amount" type="number" step="0.001" value="${netTotal}">
+    <p style="font-size:11px;color:var(--ink-mute)">صافي أمر الشراء: ${parseFloat(netTotal).toFixed(3)} — أي فرق سيُسجَّل كعدم مطابقة (3-Way Match)</p>
+    <div id="m_viMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitVendorInvoice('${poId}','${supplierId}')">تسجيل الفاتورة</button></div>
+  `);
+}
+async function submitVendorInvoice(poId, supplierId) {
+  const amount = parseFloat(document.getElementById('vi_amount').value);
+  const result = await ProcurementClient.postVendorInvoice(currentCompanyId, supplierId || null, poId, amount);
+  if (!result.ok) { document.getElementById('m_viMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal();
+  showToast(`تم تسجيل فاتورة المورد ${result.vi_number} — ${result.matched ? '✅ مطابقة تمامًا' : '⚠️ يوجد فرق: ' + result.variance.toFixed(3)}`);
+  renderPurchaseOrders();
+}
+
+/* ============================================================
+   🆕 إضافات app-new.html — الجزء 2: البنك، عروض الأسعار، العمولات، الضرائب، الفروع، الموازنة، الذمم
+   ============================================================ */
+
+/* ---------- 4) التسوية البنكية ---------- */
+async function renderBankReconciliation() {
+  const [accResult, listResult] = await Promise.all([BankClient.listAccounts(currentCompanyId), BankClient.listReconciliations(currentCompanyId)]);
+  cache.bankAccounts = accResult.ok ? accResult.accounts : [];
+  const recs = listResult.ok ? listResult.list : [];
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('🏦','التسوية البنكية', cache.bankAccounts.length + ' حساب بنكي')}
+      <div class="toolbar">
+        <div class="spacer"></div>
+        <button onclick="openAddBankAccountModal()">+ حساب بنكي</button>
+        <button class="btn-gold" onclick="openNewReconciliationModal()">+ تسوية جديدة</button>
+      </div>
+      <table>
+        <thead><tr><th>البنك</th><th>الفترة</th><th>رصيد البنك</th><th>رصيد الدفاتر</th><th>الحالة</th><th></th></tr></thead>
+        <tbody>
+          ${recs.map(r => `
+            <tr>
+              <td>${r.bank_accounts?.bank_name||'—'}</td><td>${r.period_year}/${r.period_month}</td>
+              <td>${r.balance_per_bank.toFixed(3)}</td><td>${r.balance_per_book.toFixed(3)}</td>
+              <td><span class="ec-badge ${r.reconciled?'':'warn'}">${r.reconciled?'متوازنة ✅':'غير متوازنة'}</span></td>
+              <td><button onclick="computeReconciliation('${r.id}')">🔄 احسب</button></td>
+            </tr>`).join('') || '<tr><td colspan="6" class="empty-state">لا يوجد تسويات بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+function openAddBankAccountModal() {
+  openModal('➕ حساب بنكي جديد', `
+    <label>كود الحساب (من دليل الحسابات)</label><input id="m_baCode" placeholder="150201">
+    <label>اسم البنك *</label><input id="m_baName">
+    <label>رقم الحساب (آخر 4 أرقام)</label><input id="m_baNum" placeholder="****1234">
+    <div id="m_baMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitAddBankAccount()">حفظ</button></div>
+  `);
+}
+async function submitAddBankAccount() {
+  const acc = {
+    account_code: document.getElementById('m_baCode').value,
+    bank_name: document.getElementById('m_baName').value,
+    account_number_masked: document.getElementById('m_baNum').value,
+  };
+  if (!acc.account_code || !acc.bank_name) { document.getElementById('m_baMsg').innerHTML = '<span class="msg-error">الحقول المطلوبة ناقصة</span>'; return; }
+  const result = await BankClient.createAccount(currentCompanyId, acc);
+  if (!result.ok) { document.getElementById('m_baMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal(); showToast('تم إضافة الحساب البنكي'); renderBankReconciliation();
+}
+function openNewReconciliationModal() {
+  const now = new Date();
+  const bankOptions = (cache.bankAccounts||[]).map(b => `<option value="${b.id}">${b.bank_name}</option>`).join('');
+  openModal('➕ تسوية بنكية جديدة', `
+    <label>الحساب البنكي</label><select id="m_recBank">${bankOptions}</select>
+    <label>السنة</label><input id="m_recYear" type="number" value="${now.getFullYear()}">
+    <label>الشهر</label><input id="m_recMonth" type="number" min="1" max="12" value="${now.getMonth()+1}">
+    <label>رصيد كشف البنك</label><input id="m_recBankBal" type="number" step="0.001">
+    <label>رصيد الدفاتر</label><input id="m_recBookBal" type="number" step="0.001">
+    <div id="m_recMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitNewReconciliation()">إنشاء التسوية</button></div>
+  `);
+}
+async function submitNewReconciliation() {
+  const bankId = document.getElementById('m_recBank').value;
+  const result = await BankClient.createReconciliation(
+    currentCompanyId, bankId,
+    parseInt(document.getElementById('m_recYear').value), parseInt(document.getElementById('m_recMonth').value),
+    parseFloat(document.getElementById('m_recBankBal').value) || 0, parseFloat(document.getElementById('m_recBookBal').value) || 0
+  );
+  if (!result.ok) { document.getElementById('m_recMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal(); showToast('تم إنشاء التسوية'); renderBankReconciliation();
+}
+async function computeReconciliation(recId) {
+  const result = await BankClient.compute(recId);
+  if (!result.ok) { showToast(result.error, 'error'); return; }
+  openModal('📊 نتيجة التسوية', `
+    <div class="kpi-row">
+      <div class="kpi"><div class="label">رصيد البنك المعدّل</div><div class="value">${result.adjusted_bank_balance.toFixed(3)}</div></div>
+      <div class="kpi"><div class="label">رصيد الدفاتر المعدّل</div><div class="value">${result.adjusted_book_balance.toFixed(3)}</div></div>
+    </div>
+    <p style="text-align:center;margin-top:12px">
+      ${result.balanced ? '<span class="msg-success">✅ التسوية متوازنة تمامًا</span>' : `<span class="msg-error">⚠️ فرق: ${result.difference.toFixed(3)}</span>`}
+    </p>`);
+  renderBankReconciliation();
+}
+
+/* ---------- 5) عروض الأسعار ---------- */
+async function renderQuotations() {
+  const result = await QuotationsClient.list(currentCompanyId);
+  const quotes = result.ok ? result.quotations : [];
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('📝','عروض الأسعار', quotes.length + ' عرض')}
+      <div class="toolbar"><div class="spacer"></div><button class="btn-gold" onclick="openCreateQuoteModal()">+ عرض سعر جديد</button></div>
+      <table>
+        <thead><tr><th>الرقم</th><th>العميل</th><th>الإجمالي</th><th>صالح حتى</th><th>الحالة</th><th></th></tr></thead>
+        <tbody>
+          ${quotes.map(q => `
+            <tr>
+              <td>${q.quote_number}</td><td>${q.customers?.name||'—'}</td><td>${q.total_amount.toFixed(3)}</td>
+              <td>${q.valid_until||'—'}</td><td><span class="ec-badge ${q.status==='converted'?'':'warn'}">${q.status}</span></td>
+              <td>${q.status!=='converted' ? `<button class="btn-gold" onclick="convertQuote('${q.id}')">✅ تحويل لفاتورة</button>` : '—'}</td>
+            </tr>`).join('') || '<tr><td colspan="6" class="empty-state">لا يوجد عروض بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+async function openCreateQuoteModal() {
+  const [c, i] = await Promise.all([CustomersClient.list(currentCompanyId), ItemsClient.list(currentCompanyId)]);
+  cache.customers = c.ok ? c.customers : []; cache.items = i.ok ? i.items : [];
+  openModal('➕ عرض سعر جديد', `
+    <label>العميل</label>${searchSelectHtml('qCust', 'ابحث عن عميل...')}
+    <label style="margin-top:10px">الصنف</label>${searchSelectHtml('qItem', 'ابحث عن صنف...')}
+    <label>الكمية</label><input id="q_qty" type="number" min="1">
+    <label>السعر</label><input id="q_price" type="number" step="0.001">
+    <label>صالح لمدة (أيام)</label><input id="q_validDays" type="number" value="30">
+    <div id="m_qMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitCreateQuote()">إنشاء العرض</button></div>
+  `);
+  initSearchSelect('qCust', cache.customers.map(c => ({ id: c.id, name: c.name })));
+  initSearchSelect('qItem', cache.items.map(i => ({ id: i.id, name: i.name })), (id) => {
+    const item = cache.items.find(i => i.id === id);
+    if (item) document.getElementById('q_price').value = item.unit_price;
+  });
+}
+async function submitCreateQuote() {
+  const customerId = getSearchSelectValue('qCust');
+  const itemId = getSearchSelectValue('qItem');
+  const qty = parseFloat(document.getElementById('q_qty').value);
+  const price = parseFloat(document.getElementById('q_price').value);
+  const validDays = parseInt(document.getElementById('q_validDays').value) || 30;
+  if (!itemId || !qty || !price) { document.getElementById('m_qMsg').innerHTML = '<span class="msg-error">أكمل البيانات</span>'; return; }
+  const result = await QuotationsClient.create(currentCompanyId, customerId || null, [{ item_id: itemId, qty, unit_price: price }], validDays);
+  if (!result.ok) { document.getElementById('m_qMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal(); showToast(`تم إنشاء عرض السعر ${result.quote.quote_number}`); renderQuotations();
+}
+async function convertQuote(quoteId) {
+  const result = await QuotationsClient.convertToSale(quoteId, false);
+  if (!result.ok) { showToast(result.error, 'error'); return; }
+  showToast(`تم تحويل العرض لفاتورة بيع رقم ${result.doc_no}`);
+  renderQuotations();
+}
+
+/* ---------- 6) عمولات المناديب ---------- */
+async function renderCommissions() {
+  const [a, cResult] = await Promise.all([AgentsClient.list(currentCompanyId), CommissionsClient.list(currentCompanyId)]);
+  cache.agents = a.ok ? a.agents : [];
+  const accruals = cResult.ok ? cResult.accruals : [];
+  const thisMonth = new Date().toISOString().slice(0,7);
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('💵','عمولات المناديب')}
+      <div class="card">
+        ${searchSelectHtml('commAgent', 'ابحث عن مندوب...')}
+        <input id="comm_period" type="month" value="${thisMonth}" style="margin-top:8px">
+        <br><br>
+        <button class="btn-gold" onclick="calcCommission()">احسب العمولة</button>
+        <div id="commMsg" style="margin-top:8px"></div>
+      </div>
+      <table>
+        <thead><tr><th>المندوب</th><th>الشهر</th><th>المبيعات</th><th>العمولة الأساسية</th><th>بونص الهدف</th><th>الإجمالي</th></tr></thead>
+        <tbody>
+          ${accruals.map(a => `<tr><td>${a.agents?.name||'—'}</td><td>${a.period}</td><td>${a.sales_value.toFixed(3)}</td><td>${a.base_commission.toFixed(3)}</td><td>${a.target_bonus.toFixed(3)}</td><td><strong>${a.total_commission.toFixed(3)}</strong></td></tr>`).join('') || '<tr><td colspan="6" class="empty-state">لا يوجد عمولات محسوبة بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+  initSearchSelect('commAgent', cache.agents.map(a => ({ id: a.id, name: a.name })));
+}
+async function calcCommission() {
+  const agentId = getSearchSelectValue('commAgent');
+  const period = document.getElementById('comm_period').value;
+  if (!agentId || !period) { document.getElementById('commMsg').innerHTML = '<span class="msg-error">اختر مندوب وشهر</span>'; return; }
+  const result = await CommissionsClient.calculate(currentCompanyId, agentId, period);
+  if (!result.ok) { document.getElementById('commMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  showToast(`تم احتساب العمولة: ${result.total.toFixed(3)} د.ك`);
+  renderCommissions();
+}
+
+/* ---------- 7) الضرائب الكويتية ---------- */
+async function renderTax() {
+  const result = await TaxClient.history(currentCompanyId);
+  const history = result.ok ? result.history : [];
+  const year = new Date().getFullYear();
+  const typeLabels = { zakat: '🕌 الزكاة', kfas: '🔬 KFAS', nlsc: '👥 NLSC' };
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('🏛️','الالتزامات الضريبية الكويتية')}
+      <div class="card">
+        <p style="font-size:13px;color:var(--ink-soft)">احتساب الزكاة الشرعية (2.5%)، حصة مؤسسة الكويت للتقدم العلمي (1%)، ودعم العمالة الوطنية (2.5%) عن سنة ${year}</p>
+        <button onclick="calcTaxes(false)">🧮 احسب فقط (بدون ترحيل)</button>
+        <button class="btn-gold" onclick="calcTaxes(true)">📊 احسب وترحّل للمحاسبة</button>
+        <div id="taxMsg" style="margin-top:8px"></div>
+      </div>
+      <table>
+        <thead><tr><th>السنة</th><th>النوع</th><th>الوعاء</th><th>المعدل</th><th>المبلغ</th><th>مُرحَّل؟</th></tr></thead>
+        <tbody>
+          ${history.map(h => `<tr><td>${h.fiscal_year}</td><td>${typeLabels[h.tax_type]||h.tax_type}</td><td>${h.base_amount.toFixed(3)}</td><td>${(h.rate*100).toFixed(1)}%</td><td><strong>${h.amount.toFixed(3)}</strong></td><td>${h.posted?'✅':'—'}</td></tr>`).join('') || '<tr><td colspan="6" class="empty-state">لا يوجد سجل بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+async function calcTaxes(post) {
+  const year = new Date().getFullYear();
+  const result = await TaxClient.calculateAll(currentCompanyId, year, post);
+  if (!result.ok) { document.getElementById('taxMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  showToast(`الإجمالي: ${result.total?.toFixed(3)} د.ك ${post ? '(تم الترحيل ✅)' : '(بدون ترحيل)'}`);
+  renderTax();
+}
+
+/* ---------- 8) الفروع ---------- */
+async function renderBranches() {
+  const result = await BranchesClient.list(currentCompanyId);
+  const branches = result.ok ? result.branches : [];
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('🏬','الفروع', branches.length + ' فرع')}
+      <div class="toolbar"><div class="spacer"></div><button class="btn-gold" onclick="openAddBranchModal()">+ إضافة فرع</button></div>
+      <div class="list-grid">
+        ${branches.map(b => `
+          <div class="entity-card">
+            <div class="ec-top"><div class="ec-name">${b.name}</div><div class="ec-code">${b.code}</div></div>
+            <div class="ec-line"><span>📍 ${b.address||'—'}</span></div>
+            <div class="ec-line"><span>📞 ${b.phone||'—'}</span></div>
+            ${b.is_head_office ? '<div class="ec-badge">المقر الرئيسي</div>' : ''}
+          </div>`).join('') || '<div class="empty-state">لا يوجد فروع بعد</div>'}
+      </div>
+    </div>`;
+}
+function openAddBranchModal() {
+  openModal('➕ إضافة فرع جديد', `
+    <label>الكود *</label><input id="m_brCode">
+    <label>الاسم *</label><input id="m_brName">
+    <label>المنطقة</label><input id="m_brRegion">
+    <label>العنوان</label><input id="m_brAddress">
+    <label>التليفون</label><input id="m_brPhone">
+    <div id="m_brMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitAddBranch()">حفظ الفرع</button></div>
+  `);
+}
+async function submitAddBranch() {
+  const branch = {
+    code: document.getElementById('m_brCode').value, name: document.getElementById('m_brName').value,
+    region: document.getElementById('m_brRegion').value, address: document.getElementById('m_brAddress').value,
+    phone: document.getElementById('m_brPhone').value,
+  };
+  if (!branch.code || !branch.name) { document.getElementById('m_brMsg').innerHTML = '<span class="msg-error">الكود والاسم مطلوبين</span>'; return; }
+  const result = await BranchesClient.create(currentCompanyId, branch);
+  if (!result.ok) { document.getElementById('m_brMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal(); showToast('تم إضافة الفرع'); renderBranches();
+}
+
+/* ---------- 9) أعمار الذمم ---------- */
+async function renderReceivablesAging() {
+  const result = await AgingClient.get(currentCompanyId);
+  const rows = result.ok ? result.rows : [];
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('⏳','أعمار الذمم (Receivables Aging)')}
+      <table>
+        <thead><tr><th>العميل</th><th>الرصيد</th><th>حد الائتمان</th><th>0-30 يوم</th><th>31-60</th><th>61-90</th><th>أكثر من 90</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr class="${r.over_limit?'row-cash':''}">
+              <td>${r.name} ${r.over_limit?'<span class="ec-badge danger">تجاوز الحد</span>':''}</td>
+              <td><strong>${r.balance.toFixed(3)}</strong></td><td>${(r.credit_limit||0).toFixed(3)}</td>
+              <td>${r.current_0_30.toFixed(3)}</td><td>${r.days_31_60.toFixed(3)}</td>
+              <td>${r.days_61_90.toFixed(3)}</td><td style="color:var(--danger)">${r.over_90.toFixed(3)}</td>
+            </tr>`).join('') || '<tr><td colspan="7" class="empty-state">لا يوجد بيانات</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+
 
 init();
 </script>
