@@ -878,9 +878,9 @@ async function renderNewSale() {
       </div>
     </div>`;
 
-  initSearchSelect('saleCust', cache.customers.map(c => ({ id: c.id, name: c.name, subtitle: c.code })));
+  initSearchSelect('saleCust', cache.customers.filter(c => c.is_active !== false).map(c => ({ id: c.id, name: c.name, subtitle: c.code })));
   initSearchSelect('saleAgent', cache.agents.map(a => ({ id: a.id, name: a.name })));
-  initSearchSelect('saleItem', cache.items.map(i => ({ id: i.id, name: i.name, subtitle: 'متاح: ' + (i.stock_qty||0) })), async (id) => {
+  initSearchSelect('saleItem', cache.items.filter(i => i.is_active !== false).map(i => ({ id: i.id, name: i.name, subtitle: 'متاح: ' + (i.stock_qty||0) })), async (id) => {
     saleLineItem = cache.items.find(i => i.id === id);
     await populateUnitSelect('s_unit', id);
     updateSalePreview();
@@ -981,8 +981,8 @@ async function renderNewPurchase() {
       </div>
     </div>`;
 
-  initSearchSelect('purSup', cache.suppliers.map(s => ({ id: s.id, name: s.name })));
-  initSearchSelect('purItem', cache.items.map(i => ({ id: i.id, name: i.name })), async (id) => {
+  initSearchSelect('purSup', cache.suppliers.filter(s => s.is_active !== false).map(s => ({ id: s.id, name: s.name })));
+  initSearchSelect('purItem', cache.items.filter(i => i.is_active !== false).map(i => ({ id: i.id, name: i.name })), async (id) => {
     purchaseLineItem = cache.items.find(i => i.id === id);
     await populateUnitSelect('p_unit', id);
     updatePurchasePreview();
@@ -1841,8 +1841,8 @@ async function openCreatePOModal() {
     <div id="m_poMsg" style="margin-top:8px"></div>
     <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitCreatePO()">إنشاء أمر الشراء</button></div>
   `);
-  initSearchSelect('poSup', cache.suppliers.map(s => ({ id: s.id, name: s.name })));
-  initSearchSelect('poItem', cache.items.map(i => ({ id: i.id, name: i.name })));
+  initSearchSelect('poSup', cache.suppliers.filter(s => s.is_active !== false).map(s => ({ id: s.id, name: s.name })));
+  initSearchSelect('poItem', cache.items.filter(i => i.is_active !== false).map(i => ({ id: i.id, name: i.name })));
 }
 async function submitCreatePO() {
   const supplierId = getSearchSelectValue('poSup');
@@ -2016,7 +2016,7 @@ async function openCreateQuoteModal() {
     <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitCreateQuote()">إنشاء العرض</button></div>
   `);
   initSearchSelect('qCust', cache.customers.map(c => ({ id: c.id, name: c.name })));
-  initSearchSelect('qItem', cache.items.map(i => ({ id: i.id, name: i.name })), (id) => {
+  initSearchSelect('qItem', cache.items.filter(i => i.is_active !== false).map(i => ({ id: i.id, name: i.name })), (id) => {
     const item = cache.items.find(i => i.id === id);
     if (item) document.getElementById('q_price').value = item.unit_price;
   });
