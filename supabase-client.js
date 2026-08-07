@@ -948,3 +948,140 @@ const SettingsUIClient = {
     return { ok: !error, error: error?.message };
   }
 };
+// ============================================================
+// 🆕 Clients للدفعة الأخيرة — تُضاف فى آخر supabase-client.js
+// ============================================================
+
+const PeriodCompareClient = {
+  async compare(companyId, p1start, p1end, p2start, p2end) {
+    const { data, error } = await supabaseClient.rpc('compare_periods', {
+      p_company_id: companyId, p_period1_start: p1start, p_period1_end: p1end,
+      p_period2_start: p2start, p_period2_end: p2end
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, ...data };
+  }
+};
+
+const ForecastClient = {
+  async trend(companyId) {
+    const { data, error } = await supabaseClient.from('monthly_sales_trend').select('*').eq('company_id', companyId).order('month');
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, months: data };
+  }
+};
+
+const OffersClient = {
+  async segments(companyId) {
+    const { data, error } = await supabaseClient.from('customer_offers_segment').select('*').eq('company_id', companyId);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, rows: data };
+  }
+};
+
+const WhOverviewClient = {
+  async summary(companyId) {
+    const { data, error } = await supabaseClient.from('items').select('stock_qty, unit_cost, origin, min_stock_level').eq('company_id', companyId).eq('is_active', true);
+    if (error) return { ok: false, error: error.message };
+    const totalValue = data.reduce((s,i) => s + (i.stock_qty * i.unit_cost), 0);
+    const imported = data.filter(i => i.origin === 'imported');
+    const local = data.filter(i => i.origin === 'local');
+    const lowStock = data.filter(i => i.stock_qty < (i.min_stock_level||0));
+    return { ok: true, totalValue, importedCount: imported.length, importedValue: imported.reduce((s,i)=>s+(i.stock_qty*i.unit_cost),0),
+      localCount: local.length, localValue: local.reduce((s,i)=>s+(i.stock_qty*i.unit_cost),0), lowStockCount: lowStock.length, totalItems: data.length };
+  }
+};
+
+const WhItemsClient = {
+  async byOrigin(companyId, origin) {
+    let query = supabaseClient.from('items').select('*').eq('company_id', companyId);
+    if (origin) query = query.eq('origin', origin);
+    const { data, error } = await query.order('name');
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, items: data };
+  },
+  async updateOrigin(itemId, origin, countryOrigin) {
+    const { error } = await supabaseClient.from('items').update({ origin, country_origin: countryOrigin }).eq('id', itemId);
+    return { ok: !error, error: error?.message };
+  }
+};
+
+const WhMovementsClient = {
+  async list(companyId, limit = 50) {
+    const { data, error } = await supabaseClient.from('stock_movements').select('*, items(name)').eq('company_id', companyId).order('created_at', { ascending: false }).limit(limit);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, movements: data };
+  }
+};
+
+const WhCostClient = {
+  async breakdown(companyId) {
+    const { data, error } = await supabaseClient.from('items').select('id, code, name, unit_cost, cost_breakdown, origin').eq('company_id', companyId).not('cost_breakdown', 'is', null);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, items: data };
+  },
+  async updateBreakdown(itemId, breakdown) {
+    const { error } = await supabaseClient.from('items').update({ cost_breakdown: breakdown }).eq('id', itemId);
+    return { ok: !error, error: error?.message };
+  }
+};
+
+const WorkflowAdminClient = {
+  async listTemplatesWithSteps(companyId) {
+    const { data, error } = await supabaseClient.from('workflow_templates').select('*, workflow_steps(*)').eq('company_id', companyId);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, templates: data };
+  },
+  async addStep(templateId, order, name, role, sla, threshold) {
+    const { error } = await supabaseClient.from('workflow_steps').insert({
+      workflow_template_id: templateId, step_order: order, step_name: name, approver_role: role, sla_days: sla, amount_threshold: threshold
+    });
+    return { ok: !error, error: error?.message };
+  }
+};
+
+const AdvancedSettingsClient = {
+  async listApiKeys(companyId) {
+    const { data, error } = await supabaseClient.from('api_keys').select('*').eq('company_id', companyId);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, keys: data };
+  },
+  async createApiKey(companyId, name) {
+    const token = (name.replace(/\s/g,'').toLowerCase().slice(0,4) || 'key') + '_' + Math.random().toString(36).slice(2, 18);
+    const { data, error } = await supabaseClient.from('api_keys').insert({ company_id: companyId, name, token }).select().single();
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, key: data };
+  },
+  async getWhatsappSettings(companyId) {
+    const { data, error } = await supabaseClient.from('whatsapp_settings').select('*').eq('company_id', companyId).maybeSingle();
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, settings: data };
+  },
+  async saveWhatsappSettings(companyId, fields) {
+    const { error } = await supabaseClient.from('whatsapp_settings').upsert({ company_id: companyId, ...fields }, { onConflict: 'company_id' });
+    return { ok: !error, error: error?.message };
+  }
+};
+
+const FieldVisitsClient = {
+  async list(companyId) {
+    const { data, error } = await supabaseClient.from('field_visits').select('*, agents(name), customers(name)').eq('company_id', companyId).order('visit_date', { ascending: false });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, visits: data };
+  },
+  async create(companyId, visit) {
+    const { data, error } = await supabaseClient.from('field_visits').insert({ company_id: companyId, ...visit }).select().single();
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, visit: data };
+  },
+  async checkIn(visitId) {
+    const pos = await new Promise((resolve) => {
+      if (!navigator.geolocation) { resolve(null); return; }
+      navigator.geolocation.getCurrentPosition(p => resolve(p.coords), () => resolve(null), { timeout: 5000 });
+    });
+    const fields = { actual_check_in: new Date().toISOString(), status: 'checked_in' };
+    if (pos) { fields.gps_lat = pos.latitude; fields.gps_lng = pos.longitude; }
+    const { error } = await supabaseClient.from('field_visits').update(fields).eq('id', visitId);
+    return { ok: !error, error: error?.message };
+  }
+};

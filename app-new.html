@@ -211,7 +211,7 @@
       <div class="side-mod open on" data-mod="home" onclick="toggleMod('home')"><span class="side-mod-ico">🏠</span><span class="side-mod-lbl">الرئيسية والقيادة</span><span class="side-caret">▾</span></div>
       <div class="side-items open" data-moditems="home">
         <a class="sidebar-link" data-view="dashboard" onclick="switchView('dashboard')"><span class="ic">📊</span> نظرة عامة تنفيذية</a>
-        <a class="sidebar-link soon"><span class="ic">⚖️</span> المقارنة بين الفترات<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link" data-view="periodCompare" onclick="switchView('periodCompare')"><span class="ic">⚖️</span> المقارنة بين الفترات</a>
       </div>
     </div>
 
@@ -223,7 +223,7 @@
         <a class="sidebar-link" data-view="agents" onclick="switchView('agents')"><span class="ic">👥</span> المناديب</a>
         <a class="sidebar-link" data-view="newSale" onclick="switchView('newSale')"><span class="ic">🧾</span> فاتورة المبيعات</a>
         <a class="sidebar-link" data-view="items" onclick="switchView('items')"><span class="ic">📦</span> الأصناف</a>
-        <a class="sidebar-link soon"><span class="ic">🎁</span> عروض الجمعيات<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link" data-view="offers" onclick="switchView('offers')"><span class="ic">🎁</span> عروض الجمعيات</a>
         <a class="sidebar-link" data-view="quotations" onclick="switchView('quotations')"><span class="ic">📄</span> عروض الأسعار</a>
         <a class="sidebar-link" data-view="newReturn" onclick="switchView('newReturn')"><span class="ic">🔄</span> مرتجع مبيعات</a>
         <a class="sidebar-link" data-view="newPayment" onclick="switchView('newPayment')"><span class="ic">💵</span> سند قبض</a>
@@ -231,10 +231,10 @@
         <a class="sidebar-link" data-view="commissions" onclick="switchView('commissions')"><span class="ic">💰</span> عمولات المندوبين</a>
         <a class="sidebar-link" data-view="receivablesAging" onclick="switchView('receivablesAging')"><span class="ic">💳</span> التحصيل والمخاطر</a>
         <a class="sidebar-link" data-view="analytics" onclick="switchView('analytics')"><span class="ic">🎯</span> تحليلات CLV + Churn</a>
-        <a class="sidebar-link soon"><span class="ic">🔮</span> التنبؤ بالمبيعات<span class="soon-tag">قريبًا</span></a>
-        <a class="sidebar-link soon"><span class="ic">🌐</span> بوابة العميل<span class="soon-tag">قريبًا</span></a>
-        <a class="sidebar-link soon"><span class="ic">📲</span> WhatsApp + SMS<span class="soon-tag">قريبًا</span></a>
-        <a class="sidebar-link soon"><span class="ic">📱</span> تطبيق المندوب<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link" data-view="forecast" onclick="switchView('forecast')"><span class="ic">🔮</span> التنبؤ بالمبيعات</a>
+        <a class="sidebar-link" data-view="portalInfo" onclick="switchView('portalInfo')"><span class="ic">🌐</span> بوابة العميل</a>
+        <a class="sidebar-link" data-view="settingsFull" onclick="switchView('settingsFull')"><span class="ic">📲</span> WhatsApp + SMS (إعدادات)</a>
+        <a class="sidebar-link" data-view="mobile" onclick="switchView('mobile')"><span class="ic">📱</span> زيارات المناديب (بديل PWA)</a>
         <a class="sidebar-link" data-view="documentsLog" onclick="switchView('documentsLog')"><span class="ic">📋</span> السجل الكامل</a>
       </div>
     </div>
@@ -243,11 +243,11 @@
     <div class="side-group">
       <div class="side-mod" data-mod="wh" onclick="toggleMod('wh')"><span class="side-mod-ico">🏭</span><span class="side-mod-lbl">المخازن والتصنيع</span><span class="side-caret">▾</span></div>
       <div class="side-items" data-moditems="wh">
-        <a class="sidebar-link soon"><span class="ic">📊</span> نظرة عامة المخازن<span class="soon-tag">قريبًا</span></a>
-        <a class="sidebar-link soon"><span class="ic">📦</span> الأصناف (مستورد/محلي)<span class="soon-tag">قريبًا</span></a>
-        <a class="sidebar-link soon"><span class="ic">🔄</span> حركة المخزون<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link" data-view="whOverview" onclick="switchView('whOverview')"><span class="ic">📊</span> نظرة عامة المخازن</a>
+        <a class="sidebar-link" data-view="whItems" onclick="switchView('whItems')"><span class="ic">📦</span> الأصناف (مستورد/محلي)</a>
+        <a class="sidebar-link" data-view="whMovements" onclick="switchView('whMovements')"><span class="ic">🔄</span> حركة المخزون</a>
         <a class="sidebar-link" data-view="whValuation" onclick="switchView('whValuation')"><span class="ic">💰</span> تقييم المخزون</a>
-        <a class="sidebar-link soon"><span class="ic">🧮</span> تحليل التكاليف<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link" data-view="whCost" onclick="switchView('whCost')"><span class="ic">🧮</span> تحليل التكاليف</a>
         <a class="sidebar-link" data-view="stdCost" onclick="switchView('stdCost')"><span class="ic">🎯</span> التكلفة المعيارية</a>
         <a class="sidebar-link" data-view="batch" onclick="switchView('batch')"><span class="ic">🏷️</span> التشغيلة والصلاحية</a>
         <a class="sidebar-link" data-view="purchaseOrders" onclick="switchView('purchaseOrders')"><span class="ic">📦</span> أوامر الشراء (3-Way)</a>
@@ -265,7 +265,7 @@
         <a class="sidebar-link" data-view="accounting" onclick="switchView('accounting')"><span class="ic">📒</span> النظام المحاسبي</a>
         <a class="sidebar-link" data-view="approvals" onclick="switchView('approvals')"><span class="ic">✅</span> مركز اعتماد المستندات</a>
         <a class="sidebar-link" data-view="posting" onclick="switchView('posting')"><span class="ic">📌</span> دفتر القيود المرحّلة</a>
-        <a class="sidebar-link soon"><span class="ic">📑</span> مركز التقارير<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link" data-view="reports" onclick="switchView('reports')"><span class="ic">📑</span> مركز التقارير</a>
         <a class="sidebar-link" data-view="fx" onclick="switchView('fx')"><span class="ic">💱</span> العملات وأسعار الصرف</a>
         <a class="sidebar-link" data-view="budget" onclick="switchView('budget')"><span class="ic">📊</span> الموازنات التقديرية</a>
         <a class="sidebar-link" data-view="assets" onclick="switchView('assets')"><span class="ic">🏢</span> الأصول الثابتة</a>
@@ -288,7 +288,7 @@
       <div class="side-items" data-moditems="hr">
         <a class="sidebar-link" data-view="employees" onclick="switchView('employees')"><span class="ic">👤</span> الموظفون</a>
         <a class="sidebar-link" data-view="payrollRun" onclick="switchView('payrollRun')"><span class="ic">💰</span> تشغيل الرواتب</a>
-        <a class="sidebar-link soon"><span class="ic">⚙️</span> محرك الموافقات<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link" data-view="workflow" onclick="switchView('workflow')"><span class="ic">⚙️</span> محرك الموافقات</a>
       </div>
     </div>
 
@@ -297,7 +297,7 @@
       <div class="side-mod" data-mod="settings" onclick="toggleMod('settings')"><span class="side-mod-ico">⚙️</span><span class="side-mod-lbl">الإدارة والاختبار</span><span class="side-caret">▾</span></div>
       <div class="side-items" data-moditems="settings">
         <a class="sidebar-link" data-view="settings" onclick="switchView('settings')"><span class="ic">💾</span> الإعدادات</a>
-        <a class="sidebar-link soon"><span class="ic">🎨</span> الإعدادات المتقدمة<span class="soon-tag">قريبًا</span></a>
+        <a class="sidebar-link" data-view="settingsFull" onclick="switchView('settingsFull')"><span class="ic">🎨</span> الإعدادات المتقدمة</a>
       </div>
     </div>
   </nav>
@@ -448,6 +448,9 @@ async function switchView(viewName) {
     accounting: renderAccounting, posting: renderPosting, budget: renderBudget, fx: renderFx,
     approvals: renderApprovals, whValuation: renderWhValuation, stdCost: renderStdCost, batch: renderBatch,
     docs: renderDocs, analytics: renderAnalytics, settings: renderSettings,
+    periodCompare: renderPeriodCompare, forecast: renderForecast, offers: renderOffers, reports: renderReports,
+    whOverview: renderWhOverview, whItems: renderWhItems, whMovements: renderWhMovements, whCost: renderWhCost,
+    workflow: renderWorkflowAdmin, settingsFull: renderSettingsFull, mobile: renderMobile, portalInfo: renderPortalInfo,
   };
   try { await renderers[viewName](); }
   catch (e) { document.getElementById('mainContent').innerHTML = `<div class="empty-state msg-error">خطأ: ${e.message}</div>`; }
@@ -2401,6 +2404,456 @@ async function submitSettings() {
   const result = await SettingsUIClient.updateCompany(currentCompanyId, fields);
   if (!result.ok) { document.getElementById('settingsMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
   showToast('تم حفظ الإعدادات بنجاح');
+}
+
+
+/* ============================================================
+   🆕 الدفعة الأخيرة — جزء 1: مقارنة فترات، تنبؤ، عروض الجمعيات، مركز التقارير
+   ============================================================ */
+
+/* ---------- المقارنة بين الفترات ---------- */
+async function renderPeriodCompare() {
+  const today = new Date().toISOString().split('T')[0];
+  const monthAgo = new Date(Date.now() - 30*86400000).toISOString().split('T')[0];
+  const twoMonthsAgo = new Date(Date.now() - 60*86400000).toISOString().split('T')[0];
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('⚖️','المقارنة بين الفترات')}
+      <div class="card">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <label style="display:block;font-size:12px;color:var(--ink-soft)">الفترة الأولى</label>
+            <input id="pc_p1s" type="date" value="${twoMonthsAgo}"> إلى <input id="pc_p1e" type="date" value="${monthAgo}">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;color:var(--ink-soft)">الفترة الثانية</label>
+            <input id="pc_p2s" type="date" value="${monthAgo}"> إلى <input id="pc_p2e" type="date" value="${today}">
+          </div>
+        </div>
+        <br><button class="btn-gold" onclick="runPeriodCompare()">قارن الفترتين</button>
+      </div>
+      <div id="periodCompareResult"></div>
+    </div>`;
+}
+async function runPeriodCompare() {
+  const result = await PeriodCompareClient.compare(
+    currentCompanyId,
+    document.getElementById('pc_p1s').value, document.getElementById('pc_p1e').value,
+    document.getElementById('pc_p2s').value, document.getElementById('pc_p2e').value
+  );
+  if (!result.ok) { showToast(result.error, 'error'); return; }
+  const salesArrow = result.sales_growth_pct >= 0 ? '📈' : '📉';
+  document.getElementById('periodCompareResult').innerHTML = `
+    <div class="kpi-row">
+      <div class="kpi"><div class="label">مبيعات الفترة 1</div><div class="value">${result.period1.sales.toFixed(3)}</div></div>
+      <div class="kpi"><div class="label">مبيعات الفترة 2</div><div class="value">${result.period2.sales.toFixed(3)}</div></div>
+      <div class="kpi"><div class="label">نسبة النمو</div><div class="value">${salesArrow} ${result.sales_growth_pct ?? '—'}%</div></div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi"><div class="label">مشتريات الفترة 1</div><div class="value">${result.period1.purchases.toFixed(3)}</div></div>
+      <div class="kpi"><div class="label">مشتريات الفترة 2</div><div class="value">${result.period2.purchases.toFixed(3)}</div></div>
+      <div class="kpi"><div class="label">عملاء نشطين (1 ← 2)</div><div class="value">${result.period1.active_customers} ← ${result.period2.active_customers}</div></div>
+    </div>`;
+}
+
+/* ---------- التنبؤ بالمبيعات (متوسط متحرك بسيط) ---------- */
+async function renderForecast() {
+  const result = await ForecastClient.trend(currentCompanyId);
+  const months = result.ok ? result.months : [];
+
+  let forecastNote = '<div class="empty-state">لا توجد بيانات كافية للتنبؤ (يحتاج 3 أشهر على الأقل)</div>';
+  if (months.length >= 3) {
+    const last3 = months.slice(-3);
+    const avg = last3.reduce((s,m) => s + parseFloat(m.total_sales), 0) / 3;
+    forecastNote = `
+      <div class="tcard-inline" style="background:linear-gradient(135deg,#5a4a1a,#8a6d1a);color:#fff;border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:12px">توقع مبيعات الشهر القادم (متوسط متحرك — آخر 3 أشهر)</div>
+        <div style="font-size:28px;font-weight:900">${avg.toFixed(3)} د.ك</div>
+      </div>`;
+  }
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('🔮','التنبؤ بالمبيعات', 'بمنهجية المتوسط المتحرك البسيط')}
+      ${forecastNote}
+      <table style="margin-top:20px">
+        <thead><tr><th>الشهر</th><th>إجمالي المبيعات</th><th>عدد الفواتير</th></tr></thead>
+        <tbody>${months.map(m => `<tr><td>${m.month}</td><td>${parseFloat(m.total_sales).toFixed(3)}</td><td>${m.invoice_count}</td></tr>`).join('') || '<tr><td colspan="3" class="empty-state">لا توجد بيانات</td></tr>'}</tbody>
+      </table>
+      <p style="font-size:11px;color:var(--ink-mute);margin-top:10px">⚠️ تنبؤ مبسّط بمتوسط آخر 3 أشهر — ليس نموذج إحصائي متقدم (ARIMA/ML)، يعطي مؤشرًا عامًا فقط</p>
+    </div>`;
+}
+
+/* ---------- عروض الجمعيات (تصنيف حسب النمو) ---------- */
+async function renderOffers() {
+  const result = await OffersClient.segments(currentCompanyId);
+  const rows = result.ok ? result.rows : [];
+  const segColors = { growth: '#1e7a3a', risk: '#c0392b', stable: '#2563a8' };
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('🎁','عروض الجمعيات — تصنيف حسب النمو')}
+      <table>
+        <thead><tr><th>الجمعية</th><th>نسبة النمو</th><th>الخصومات الممنوحة</th><th>الرصيد</th><th>التوصية</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr><td>${r.name}</td><td>${(r.growth_rate||0).toFixed(1)}%</td><td>${(r.discount_value||0).toFixed(3)}</td><td>${(r.balance||0).toFixed(3)}</td>
+              <td><span class="ec-badge" style="background:${segColors[r.segment_key]}22;color:${segColors[r.segment_key]}">${r.recommendation}</span></td></tr>`).join('') || '<tr><td colspan="5" class="empty-state">لا توجد بيانات نمو مسجّلة بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+/* ---------- مركز التقارير (هب موحّد لكل التقارير) ---------- */
+function renderReports() {
+  const reports = [
+    { view: 'customerStatement', icon: '📋', name: 'كشف حساب عميل' },
+    { view: 'receivablesAging', icon: '⏳', name: 'أعمار الذمم' },
+    { view: 'commissions', icon: '💵', name: 'عمولات المناديب' },
+    { view: 'accounting', icon: '📒', name: 'ميزان المراجعة' },
+    { view: 'posting', icon: '📌', name: 'دفتر القيود' },
+    { view: 'budget', icon: '📊', name: 'الموازنة مقابل الفعلي' },
+    { view: 'whValuation', icon: '💰', name: 'تقييم المخزون' },
+    { view: 'stdCost', icon: '🎯', name: 'التكلفة المعيارية' },
+    { view: 'analytics', icon: '🎯', name: 'تحليلات CLV' },
+    { view: 'periodCompare', icon: '⚖️', name: 'مقارنة الفترات' },
+    { view: 'forecast', icon: '🔮', name: 'التنبؤ بالمبيعات' },
+    { view: 'offers', icon: '🎁', name: 'عروض الجمعيات' },
+    { view: 'documentsLog', icon: '🗂️', name: 'سجل كل المستندات' },
+  ];
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('📑','مركز التقارير', 'كل التقارير فى مكان واحد')}
+      <div class="list-grid">
+        ${reports.map(r => `
+          <div class="entity-card" style="cursor:pointer" onclick="switchView('${r.view}')">
+            <div style="font-size:28px;text-align:center;margin-bottom:8px">${r.icon}</div>
+            <div class="ec-name" style="text-align:center">${r.name}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   🆕 الدفعة الأخيرة — جزء 2: المخازن الأربعة (نظرة عامة، أصناف، حركة، تكاليف)
+   ============================================================ */
+
+/* ---------- نظرة عامة المخازن ---------- */
+async function renderWhOverview() {
+  const result = await WhOverviewClient.summary(currentCompanyId);
+  if (!result.ok) { document.getElementById('mainContent').innerHTML = `<div class="empty-state msg-error">${result.error}</div>`; return; }
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('📊','نظرة عامة المخازن')}
+      <div class="kpi-row">
+        <div class="kpi"><div class="label">💰 قيمة المخزون</div><div class="value">${result.totalValue.toFixed(3)}</div></div>
+        <div class="kpi"><div class="label">📦 مستورد</div><div class="value">${result.importedValue.toFixed(3)}</div><div style="font-size:11px;color:var(--ink-mute)">${result.importedCount} صنف</div></div>
+        <div class="kpi"><div class="label">🏭 محلي</div><div class="value">${result.localValue.toFixed(3)}</div><div style="font-size:11px;color:var(--ink-mute)">${result.localCount} صنف</div></div>
+        <div class="kpi"><div class="label">⚠️ مخزون منخفض</div><div class="value">${result.lowStockCount}</div></div>
+      </div>
+      <div class="card">
+        <h3>روابط سريعة</h3>
+        <button onclick="switchView('whItems')">📦 الأصناف (مستورد/محلي)</button>
+        <button onclick="switchView('whMovements')">🔄 حركة المخزون</button>
+        <button onclick="switchView('whValuation')">💰 تقييم المخزون</button>
+        <button onclick="switchView('whCost')">🧮 تحليل التكاليف</button>
+      </div>
+    </div>`;
+}
+
+/* ---------- الأصناف مستورد/محلي ---------- */
+async function renderWhItems() {
+  const result = await WhItemsClient.byOrigin(currentCompanyId);
+  const items = result.ok ? result.items : [];
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('📦','الأصناف حسب المنشأ')}
+      <div class="toolbar">
+        <select id="wh_originFilter" onchange="filterWhItems()">
+          <option value="">كل الأصناف</option><option value="imported">مستورد فقط</option><option value="local">محلي فقط</option>
+        </select>
+      </div>
+      <table>
+        <thead><tr><th>الكود</th><th>الاسم</th><th>المنشأ</th><th>بلد المنشأ</th><th>الكمية</th><th>التكلفة</th><th></th></tr></thead>
+        <tbody id="whItemsBody"></tbody>
+      </table>
+    </div>`;
+  window._whAllItems = items;
+  renderWhItemsRows(items);
+}
+function renderWhItemsRows(items) {
+  document.getElementById('whItemsBody').innerHTML = items.map(i => `
+    <tr><td>${i.code}</td><td><strong>${i.name}</strong></td>
+      <td><span class="ec-badge ${i.origin==='imported'?'':''}">${i.origin==='imported'?'مستورد':'محلي'}</span></td>
+      <td>${i.country_origin||'—'}</td><td>${i.stock_qty}</td><td>${i.unit_cost.toFixed(4)}</td>
+      <td><button onclick="editItemOrigin('${i.id}','${i.origin}')">✏️</button></td></tr>`).join('') || '<tr><td colspan="7" class="empty-state">لا توجد أصناف</td></tr>';
+}
+function filterWhItems() {
+  const val = document.getElementById('wh_originFilter').value;
+  const filtered = val ? window._whAllItems.filter(i => i.origin === val) : window._whAllItems;
+  renderWhItemsRows(filtered);
+}
+async function editItemOrigin(itemId, currentOrigin) {
+  const origin = confirm('هل هذا الصنف مستورد؟ (إلغاء = محلي)') ? 'imported' : 'local';
+  let country = null;
+  if (origin === 'imported') country = prompt('بلد المنشأ:', '');
+  const result = await WhItemsClient.updateOrigin(itemId, origin, country);
+  if (!result.ok) { showToast(result.error, 'error'); return; }
+  showToast('تم التحديث'); renderWhItems();
+}
+
+/* ---------- حركة المخزون ---------- */
+async function renderWhMovements() {
+  const result = await WhMovementsClient.list(currentCompanyId);
+  const movements = result.ok ? result.movements : [];
+  const typeLabels = { sale_out: '📤 بيع', purchase_in: '📥 شراء', return_in: '↩️ مرتجع وارد', return_out: '↪️ مرتجع صادر',
+    adjustment_in: '✏️ تسوية+', adjustment_out: '✏️ تسوية-', write_off: '🗑️ إتلاف', opening_balance: '🏁 رصيد افتتاحي' };
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('🔄','حركة المخزون', movements.length + ' حركة')}
+      <table>
+        <thead><tr><th>التاريخ</th><th>الصنف</th><th>النوع</th><th>الكمية</th><th>مرجع</th><th>ملاحظات</th></tr></thead>
+        <tbody>
+          ${movements.map(m => `
+            <tr><td>${new Date(m.created_at).toLocaleDateString('ar-KW')}</td><td>${m.items?.name||'—'}</td>
+              <td>${typeLabels[m.movement_type]||m.movement_type}</td><td>${m.qty}</td><td>${m.reference_doc_no||'—'}</td><td>${m.notes||'—'}</td></tr>`).join('') || '<tr><td colspan="6" class="empty-state">لا توجد حركات</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+/* ---------- تحليل التكاليف (Landed Cost breakdown) ---------- */
+async function renderWhCost() {
+  const [breakdownResult, itemsResult] = await Promise.all([WhCostClient.breakdown(currentCompanyId), ItemsClient.list(currentCompanyId)]);
+  const withBreakdown = breakdownResult.ok ? breakdownResult.items : [];
+  cache.items = itemsResult.ok ? itemsResult.items : [];
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('🧮','تحليل التكاليف (Landed Cost)')}
+      <div class="toolbar"><div class="spacer"></div><button class="btn-gold" onclick="openCostBreakdownModal()">+ إضافة تفصيل تكلفة</button></div>
+      <table>
+        <thead><tr><th>الصنف</th><th>سعر التكلفة الحالي</th><th>تفاصيل التكلفة</th></tr></thead>
+        <tbody>
+          ${withBreakdown.map(i => `
+            <tr><td>${i.name}</td><td>${i.unit_cost.toFixed(4)}</td>
+              <td>${Object.entries(i.cost_breakdown||{}).map(([k,v]) => `${k}: ${v}`).join(' · ')}</td></tr>`).join('') || '<tr><td colspan="3" class="empty-state">لا توجد تفاصيل تكلفة مُدخلة بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+function openCostBreakdownModal() {
+  const itemOptions = (cache.items||[]).map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+  openModal('➕ تفصيل تكلفة صنف (FOB → CIF → Landed)', `
+    <label>الصنف *</label><select id="m_cbItem">${itemOptions}</select>
+    <label>سعر FOB</label><input id="m_cbFob" type="number" step="0.001" value="0">
+    <label>الشحن</label><input id="m_cbShipping" type="number" step="0.001" value="0">
+    <label>التأمين</label><input id="m_cbInsurance" type="number" step="0.001" value="0">
+    <label>الجمارك</label><input id="m_cbCustoms" type="number" step="0.001" value="0">
+    <label>التخليص والنقل الداخلي</label><input id="m_cbClearance" type="number" step="0.001" value="0">
+    <div id="m_cbMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitCostBreakdown()">حفظ</button></div>
+  `);
+}
+async function submitCostBreakdown() {
+  const itemId = document.getElementById('m_cbItem').value;
+  const breakdown = {
+    FOB: parseFloat(document.getElementById('m_cbFob').value) || 0,
+    'الشحن': parseFloat(document.getElementById('m_cbShipping').value) || 0,
+    'التأمين': parseFloat(document.getElementById('m_cbInsurance').value) || 0,
+    'الجمارك': parseFloat(document.getElementById('m_cbCustoms').value) || 0,
+    'التخليص': parseFloat(document.getElementById('m_cbClearance').value) || 0,
+  };
+  const result = await WhCostClient.updateBreakdown(itemId, breakdown);
+  if (!result.ok) { document.getElementById('m_cbMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal(); showToast('تم حفظ تفصيل التكلفة'); renderWhCost();
+}
+
+/* ============================================================
+   🆕 الدفعة الأخيرة — جزء 3: محرك الموافقات، الإعدادات المتقدمة، واتساب، الزيارات الميدانية
+   ============================================================ */
+
+/* ---------- محرك الموافقات (إدارة القوالب والخطوات) ---------- */
+async function renderWorkflowAdmin() {
+  const result = await WorkflowAdminClient.listTemplatesWithSteps(currentCompanyId);
+  const templates = result.ok ? result.templates : [];
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('⚙️','محرك الموافقات — إدارة القوالب')}
+      ${templates.map(t => `
+        <div class="card">
+          <h3>${t.name}</h3>
+          <table>
+            <thead><tr><th>#</th><th>الخطوة</th><th>الدور</th><th>SLA (أيام)</th><th>حد المبلغ</th></tr></thead>
+            <tbody>
+              ${(t.workflow_steps||[]).sort((a,b)=>a.step_order-b.step_order).map(s => `
+                <tr><td>${s.step_order}</td><td>${s.step_name}</td><td>${s.approver_role}</td><td>${s.sla_days}</td><td>${s.amount_threshold||'—'}</td></tr>`).join('')}
+            </tbody>
+          </table>
+          <button style="margin-top:8px" onclick="openAddStepModal('${t.id}', ${(t.workflow_steps||[]).length + 1})">+ إضافة خطوة</button>
+        </div>`).join('') || '<div class="empty-state">لا توجد قوالب سير عمل بعد — نُفّذت عبر seed_default_workflow_templates وقت الإعداد</div>'}
+    </div>`;
+}
+function openAddStepModal(templateId, nextOrder) {
+  openModal('➕ إضافة خطوة موافقة', `
+    <label>اسم الخطوة *</label><input id="m_stepName">
+    <label>الدور المسؤول *</label><input id="m_stepRole" placeholder="manager / cfo / ceo">
+    <label>مهلة الرد (أيام)</label><input id="m_stepSla" type="number" value="1">
+    <label>حد المبلغ الأدنى (اختياري)</label><input id="m_stepThreshold" type="number" step="0.001">
+    <div id="m_stepMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitAddStep('${templateId}', ${nextOrder})">حفظ الخطوة</button></div>
+  `);
+}
+async function submitAddStep(templateId, order) {
+  const name = document.getElementById('m_stepName').value;
+  const role = document.getElementById('m_stepRole').value;
+  const sla = parseInt(document.getElementById('m_stepSla').value) || 1;
+  const threshold = document.getElementById('m_stepThreshold').value ? parseFloat(document.getElementById('m_stepThreshold').value) : null;
+  if (!name || !role) { document.getElementById('m_stepMsg').innerHTML = '<span class="msg-error">الاسم والدور مطلوبين</span>'; return; }
+  const result = await WorkflowAdminClient.addStep(templateId, order, name, role, sla, threshold);
+  if (!result.ok) { document.getElementById('m_stepMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal(); showToast('تم إضافة الخطوة'); renderWorkflowAdmin();
+}
+
+/* ---------- الإعدادات المتقدمة (Dark Mode + API Keys + WhatsApp) ---------- */
+async function renderSettingsFull() {
+  const [keysResult, waResult] = await Promise.all([AdvancedSettingsClient.listApiKeys(currentCompanyId), AdvancedSettingsClient.getWhatsappSettings(currentCompanyId)]);
+  const keys = keysResult.ok ? keysResult.keys : [];
+  const wa = waResult.ok ? waResult.settings : null;
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('🎨','الإعدادات المتقدمة')}
+
+      <div class="card">
+        <h3>🌗 المظهر</h3>
+        <button onclick="showToast('الوضع الداكن قيد التطوير للنسخة القادمة', 'error')">تفعيل الوضع الداكن (قريبًا)</button>
+      </div>
+
+      <div class="card">
+        <h3>🔑 مفاتيح API</h3>
+        <table>
+          <thead><tr><th>الاسم</th><th>المفتاح</th><th>الحالة</th></tr></thead>
+          <tbody>${keys.map(k => `<tr><td>${k.name}</td><td><code style="font-size:11px">${k.token}</code></td><td>${k.is_active?'✅ نشط':'❌ معطّل'}</td></tr>`).join('') || '<tr><td colspan="3" class="empty-state">لا توجد مفاتيح بعد</td></tr>'}</tbody>
+        </table>
+        <button style="margin-top:8px" onclick="createApiKey()">+ إنشاء مفتاح جديد</button>
+      </div>
+
+      <div class="card">
+        <h3>📲 إعدادات واتساب</h3>
+        <p style="font-size:11.5px;color:var(--ink-mute)">⚠️ لتفعيل الإرسال الفعلي، تحتاج حساب WhatsApp Business API حقيقي (Meta أو Twilio) — هنا بس بيانات الإعداد، الإرسال الفعلي خطوة تالية منفصلة تحتاج مفاتيحك الحقيقية</p>
+        <label style="display:inline-flex;align-items:center;gap:6px">
+          <input type="checkbox" id="wa_enabled" style="width:auto" ${wa?.is_enabled?'checked':''}> تفعيل واتساب
+        </label><br>
+        <label>مزوّد الخدمة</label>
+        <select id="wa_provider"><option value="whatsapp-business" ${wa?.api_provider==='whatsapp-business'?'selected':''}>WhatsApp Business API</option><option value="twilio" ${wa?.api_provider==='twilio'?'selected':''}>Twilio</option></select>
+        <label>رقم الهاتف (Phone Number ID)</label><input id="wa_phoneId" value="${wa?.phone_number_id||''}">
+        <br><br>
+        <button class="btn-gold" onclick="saveWaSettings()">حفظ إعدادات واتساب</button>
+        <div id="waMsg" style="margin-top:8px"></div>
+      </div>
+    </div>`;
+}
+async function createApiKey() {
+  const name = prompt('اسم المفتاح (مثال: Mobile App):');
+  if (!name) return;
+  const result = await AdvancedSettingsClient.createApiKey(currentCompanyId, name);
+  if (!result.ok) { showToast(result.error, 'error'); return; }
+  showToast('تم إنشاء المفتاح: ' + result.key.token);
+  renderSettingsFull();
+}
+async function saveWaSettings() {
+  const fields = {
+    is_enabled: document.getElementById('wa_enabled').checked,
+    api_provider: document.getElementById('wa_provider').value,
+    phone_number_id: document.getElementById('wa_phoneId').value,
+  };
+  const result = await AdvancedSettingsClient.saveWhatsappSettings(currentCompanyId, fields);
+  if (!result.ok) { document.getElementById('waMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  showToast('تم حفظ إعدادات واتساب');
+}
+
+/* ---------- تطبيق المندوب (Field Visits — بديل عملي داخل نفس النظام) ---------- */
+async function renderMobile() {
+  const [visitsResult, agentsResult, customersResult] = await Promise.all([
+    FieldVisitsClient.list(currentCompanyId), AgentsClient.list(currentCompanyId), CustomersClient.list(currentCompanyId)
+  ]);
+  const visits = visitsResult.ok ? visitsResult.visits : [];
+  cache.agents = agentsResult.ok ? agentsResult.agents : [];
+  cache.customers = customersResult.ok ? customersResult.customers : [];
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('📱','زيارات المناديب الميدانية', 'بديل عملي لتطبيق منفصل — نفس الوظيفة داخل النظام')}
+      <p style="font-size:11.5px;color:var(--ink-mute)">⚠️ تطبيق موبايل منفصل (PWA مستقل) مشروع بحد ذاته (تصميم شاشة موبايل، تثبيت، عمل بدون إنترنت) — هذه الشاشة تغطي نفس الوظيفة الجوهرية (تسجيل زيارة + موقع GPS) داخل نفس النظام الحالي</p>
+      <div class="toolbar"><div class="spacer"></div><button class="btn-gold" onclick="openAddVisitModal()">+ جدولة زيارة</button></div>
+      <table>
+        <thead><tr><th>المندوب</th><th>العميل</th><th>التاريخ</th><th>الحالة</th><th></th></tr></thead>
+        <tbody>
+          ${visits.map(v => `
+            <tr><td>${v.agents?.name||'—'}</td><td>${v.customers?.name||'—'}</td><td>${v.visit_date}</td>
+              <td><span class="ec-badge ${v.status==='completed'?'':'warn'}">${v.status}</span></td>
+              <td>${v.status==='planned' ? `<button onclick="checkInVisit('${v.id}')">📍 تسجيل حضور (GPS)</button>` : (v.gps_lat ? `📍 ${v.gps_lat.toFixed(4)}, ${v.gps_lng.toFixed(4)}` : '—')}</td></tr>`).join('') || '<tr><td colspan="5" class="empty-state">لا توجد زيارات مجدولة</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+function openAddVisitModal() {
+  openModal('➕ جدولة زيارة ميدانية', `
+    <label>المندوب</label>${searchSelectHtml('visitAgent', 'ابحث عن مندوب...')}
+    <label style="margin-top:10px">العميل</label>${searchSelectHtml('visitCust', 'ابحث عن عميل...')}
+    <label>تاريخ الزيارة *</label><input id="m_visitDate" type="date" value="${new Date().toISOString().split('T')[0]}">
+    <div id="m_visitMsg" style="margin-top:8px"></div>
+    <div class="modal-footer" style="padding:16px 0 0"><button class="btn-gold" onclick="submitAddVisit()">حفظ</button></div>
+  `);
+  initSearchSelect('visitAgent', cache.agents.map(a => ({ id: a.id, name: a.name })));
+  initSearchSelect('visitCust', cache.customers.map(c => ({ id: c.id, name: c.name })));
+}
+async function submitAddVisit() {
+  const visit = {
+    agent_id: getSearchSelectValue('visitAgent'), customer_id: getSearchSelectValue('visitCust') || null,
+    visit_date: document.getElementById('m_visitDate').value,
+  };
+  if (!visit.agent_id || !visit.visit_date) { document.getElementById('m_visitMsg').innerHTML = '<span class="msg-error">المندوب والتاريخ مطلوبين</span>'; return; }
+  const result = await FieldVisitsClient.create(currentCompanyId, visit);
+  if (!result.ok) { document.getElementById('m_visitMsg').innerHTML = `<span class="msg-error">${result.error}</span>`; return; }
+  closeModal(); showToast('تم جدولة الزيارة'); renderMobile();
+}
+async function checkInVisit(visitId) {
+  const result = await FieldVisitsClient.checkIn(visitId);
+  if (!result.ok) { showToast(result.error, 'error'); return; }
+  showToast('تم تسجيل الحضور' + (navigator.geolocation ? ' مع الموقع الجغرافي' : ''));
+  renderMobile();
+}
+
+
+
+/* ---------- بوابة العميل — توضيح صريح للقيد المعماري ---------- */
+function renderPortalInfo() {
+  document.getElementById('mainContent').innerHTML = `
+    <div class="view-fade">
+      ${viewHeader('🌐','بوابة العميل')}
+      <div class="card" style="border-right:4px solid var(--gold-2)">
+        <h3>⚠️ ليه دي مش شاشة عادية زي الباقي</h3>
+        <p style="font-size:13px;line-height:1.8;color:var(--ink-soft)">
+          بوابة العميل مختلفة معماريًا عن كل الشاشات التانية فى النظام ده — هي مش "شاشة جوه لوحة تحكمك"،
+          هي <strong>تطبيق منفصل بالكامل</strong> بتاع العميل نفسه: صفحة تسجيل دخول مستقلة للعميل (مش موظفينك)،
+          صلاحيات مختلفة تمامًا (العميل يشوف بياناته هو بس، مش أي بيانات تانية)، وتصميم واجهة مختلف (Storefront بدل لوحة تحكم إدارية).
+        </p>
+        <h3 style="margin-top:16px">✅ اللي جاهز فعليًا من ناحية قاعدة البيانات</h3>
+        <ul style="font-size:13px;line-height:2;color:var(--ink-soft)">
+          <li>جدول <code>customers</code> فيه كل بيانات العميل جاهزة للعرض</li>
+          <li>نظام Auth (Supabase) بيدعم "أدوار" متعددة — يقدر يتوسّع لدور "عميل" منفصل عن "موظف"</li>
+          <li>RLS (عزل البيانات) جاهز أصلاً — سهل نضيف سياسة "العميل يشوف بياناته بس"</li>
+        </ul>
+        <h3 style="margin-top:16px">📋 المطلوب فعليًا لبنائها</h3>
+        <p style="font-size:13px;color:var(--ink-soft)">صفحة تسجيل دخول عملاء منفصلة (index تاني)، تصميم واجهة "متجر/بوابة" مختلف عن لوحة التحكم دي، ومنطق تسجيل عملاء جدد. ده مشروع فرعي حقيقي (يومين-3 أيام شغل)، مش إضافة Modal زي باقي الشاشات.</p>
+        <button class="btn-gold" style="margin-top:12px" onclick="showToast('اطلب منى ابدأ بناء بوابة العميل كمشروع منفصل فى أى وقت جاهز')">جاهز أبدأ بناءها؟</button>
+      </div>
+    </div>`;
 }
 
 
