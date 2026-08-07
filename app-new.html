@@ -7,6 +7,7 @@
 <style>
   .app-shell{ display:flex; min-height:calc(100vh - 60px) }
   .sidebar{ width:250px; background:var(--navy-0); padding:10px 0; flex-shrink:0; overflow-y:auto; max-height:calc(100vh - 60px) }
+  .sidebar-locked{ pointer-events:none; opacity:.5 }
   .side-group{ margin-bottom:2px }
   .side-mod{
     display:flex; align-items:center; gap:10px; padding:11px 16px; cursor:pointer;
@@ -204,7 +205,7 @@
 </header>
 
 <div class="app-shell">
-  <nav class="sidebar" id="sidebarNav">
+  <nav class="sidebar sidebar-locked" id="sidebarNav">
 
     <!-- ════════ 1) الرئيسية والقيادة ════════ -->
     <div class="side-group">
@@ -429,11 +430,13 @@ async function init() {
   }
   currentCompanyId = companyInfo.company_id;
   document.getElementById('companyNameDisplay').textContent = (companyInfo.companies?.name_ar || '') + ' — ' + user.email;
+  document.getElementById('sidebarNav').classList.remove('sidebar-locked');
   switchView('dashboard');
 }
 async function doLogout() { await AuthClientV2.logout(); window.location.href = 'test-auth.html'; }
 
 async function switchView(viewName) {
+  if (!currentCompanyId) return;
   document.querySelectorAll('.sidebar-link').forEach(a => a.classList.remove('active'));
   document.querySelector(`[data-view="${viewName}"]`)?.classList.add('active');
   showLoading(true);
