@@ -317,6 +317,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="supabase-client.js"></script>
 <script>
 let currentCompanyId = null;
@@ -370,6 +371,16 @@ function sortArrow(key, col) {
   const s = sortState[key];
   if (!s || s.col !== col) return '';
   return s.dir === 1 ? ' ▲' : ' ▼';
+}
+
+/* ---------- تصدير Excel (نفس مكتبة SheetJS المستخدمة فى استيراد الأصناف) ---------- */
+function exportToExcel(rows, filename, sheetName) {
+  if (!rows || rows.length === 0) { showToast('لا توجد بيانات للتصدير', 'error'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName || 'Sheet1');
+  XLSX.writeFile(wb, filename + '.xlsx');
+  showToast('تم تصدير الملف');
 }
 
 // 🆕 فتح/قفل مجموعة فى القائمة الجانبية (زى toggleMod الأصلية)
@@ -568,6 +579,7 @@ async function renderCustomers() {
           <option value="code">فرز: الكود</option>
         </select>
         <div class="spacer"></div>
+        <button onclick="exportCustomers()">📤 تصدير Excel</button>
         <button class="btn-gold" onclick="openAddCustomerModal()">+ إضافة عميل</button>
       </div>
       <div class="list-grid" id="custGrid"></div>
@@ -576,6 +588,16 @@ async function renderCustomers() {
   renderCustomersGrid('');
 }
 function renderCustomersGridFull() { renderCustomersGrid(document.getElementById('custFilter')?.value || ''); }
+function exportCustomers() {
+  const f = (document.getElementById('custFilter')?.value || '').toLowerCase();
+  const showInactive = document.getElementById('custShowInactive')?.checked;
+  const filtered = cache.customers.filter(c => (showInactive || c.is_active !== false) && (!f || c.name.toLowerCase().includes(f) || (c.code||'').toLowerCase().includes(f)));
+  const rows = filtered.map(c => ({
+    'الكود': c.code || '', 'الاسم': c.name, 'التليفون': c.phone || '', 'العنوان': c.address || '',
+    'الرصيد': c.balance || 0, 'الحالة': c.is_active === false ? 'موقوف' : 'نشط',
+  }));
+  exportToExcel(rows, 'العملاء', 'العملاء');
+}
 function renderCustomersGrid(filter) {
   const f = (filter||'').toLowerCase();
   const showInactive = document.getElementById('custShowInactive')?.checked;
@@ -718,6 +740,7 @@ async function renderItems() {
           <option value="code">فرز: الكود</option>
         </select>
         <div class="spacer"></div>
+        <button onclick="exportItems()">📤 تصدير Excel</button>
         <button onclick="window.location.href='import-items.html'">📥 استيراد من إكسل</button>
         <button class="btn-gold" onclick="openAddItemModal()">+ إضافة صنف</button>
       </div>
@@ -727,6 +750,16 @@ async function renderItems() {
   renderItemsGrid('');
 }
 function renderItemsGridFull() { renderItemsGrid(document.getElementById('itFilter')?.value || ''); }
+function exportItems() {
+  const f = (document.getElementById('itFilter')?.value || '').toLowerCase();
+  const showInactive = document.getElementById('itShowInactive')?.checked;
+  const filtered = cache.items.filter(i => (showInactive || i.is_active !== false) && (!f || i.name.toLowerCase().includes(f) || (i.code||'').toLowerCase().includes(f)));
+  const rows = filtered.map(i => ({
+    'الكود': i.code || '', 'الاسم': i.name, 'سعر التكلفة': i.unit_cost || 0, 'سعر البيع': i.unit_price || 0,
+    'المخزون': i.stock_qty || 0, 'الحالة': i.is_active === false ? 'موقوف' : 'نشط',
+  }));
+  exportToExcel(rows, 'الأصناف', 'الأصناف');
+}
 function renderItemsGrid(filter) {
   const f = (filter||'').toLowerCase();
   const showInactive = document.getElementById('itShowInactive')?.checked;
@@ -818,6 +851,7 @@ async function renderSuppliers() {
           <option value="code">فرز: الكود</option>
         </select>
         <div class="spacer"></div>
+        <button onclick="exportSuppliers()">📤 تصدير Excel</button>
         <button class="btn-gold" onclick="openAddSupplierModal()">+ إضافة مورد</button>
       </div>
       <div class="list-grid" id="supGrid"></div>
@@ -826,6 +860,16 @@ async function renderSuppliers() {
   renderSuppliersGrid('');
 }
 function renderSuppliersGridFull() { renderSuppliersGrid(document.getElementById('supFilter')?.value || ''); }
+function exportSuppliers() {
+  const f = (document.getElementById('supFilter')?.value || '').toLowerCase();
+  const showInactive = document.getElementById('supShowInactive')?.checked;
+  const filtered = cache.suppliers.filter(s => (showInactive || s.is_active !== false) && (!f || s.name.toLowerCase().includes(f)));
+  const rows = filtered.map(s => ({
+    'الكود': s.code || '', 'الاسم': s.name, 'التليفون': s.phone || '', 'الرقم الضريبي': s.tax_number || '',
+    'المستحق له': s.balance || 0, 'الحالة': s.is_active === false ? 'موقوف' : 'نشط',
+  }));
+  exportToExcel(rows, 'الموردين', 'الموردين');
+}
 function renderSuppliersGrid(filter) {
   const f = (filter||'').toLowerCase();
   const showInactive = document.getElementById('supShowInactive')?.checked;
@@ -1691,6 +1735,8 @@ async function renderDocumentsLog() {
           </select>
           <input id="dl_from" type="date" onchange="loadDocumentsLog()">
           <input id="dl_to" type="date" onchange="loadDocumentsLog()">
+          <div class="spacer"></div>
+          <button onclick="exportDocumentsLog()">📤 تصدير Excel</button>
         </div>
       </div>
       <table>
@@ -1748,6 +1794,13 @@ async function setDocDueDate(docType, docNo, dueDate) {
   const result = await DocumentsClient.setDueDate(currentCompanyId, docType, docNo, dueDate);
   if (!result.ok) { showToast(result.error, 'error'); return; }
   showToast('تم تحديث تاريخ الاستحقاق');
+}
+function exportDocumentsLog() {
+  const rows = documentsLogData.map(d => ({
+    'النوع': docTypeLabels[d.type] || d.type, 'رقم المستند': d.doc_no, 'التاريخ': new Date(d.date).toLocaleDateString('ar-KW'),
+    'الجهة': d.party, 'مرجع': d.ref_doc_no || '', 'المبلغ': d.total, 'تاريخ الاستحقاق': d.dueDate || '',
+  }));
+  exportToExcel(rows, 'سجل المستندات', 'المستندات');
 }
 
 /* ============================================================
